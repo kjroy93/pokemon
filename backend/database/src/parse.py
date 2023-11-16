@@ -1,79 +1,98 @@
 # Standard libraries of Python
 
-from typing import List
-from time import gmtime
+from functools import wraps
+from typing import Literal,Callable
 
 # Dependencies
-import pandas as pd
 import requests
 import re
 
-from pandas import DataFrame
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup,ResultSet
 
-assert requests.get("https://www.serebii.net/index2.shtml").status_code == 200, 'There is a problem with Serebii webpage'
+URL = "https://www.serebii.net/index2.shtml"
 
-def str_cleaning(func):
-    def wrapper(self):
-        table = self.soup.find_all('table', class_='dextable')
-        strings = table[1].find_all('table')[2].text.split()
-        part_1, part_2 = func(self, strings)
+assert requests.get(URL).status_code == 200, 'There is a problem with Serebii webpage'
 
-        return part_1, part_2
-
-    return wrapper
-
-def basic_table(func):
-    def wrapper(self):
-        self.table = self.soup.find_all('table', class_='dextable')
-        return func(self)
-
-    return wrapper
+def with_location_info(division: int, select_table: Literal['foo', 'foo_info']) -> Callable:
+    def decorator(method):
+        @wraps(method)
+        def wrapper(self, *args, **kwargs):
+            location = self.__basic_tables(division, select_table)
+            return method(self, location, *args, **kwargs)
+        return wrapper
+    return decorator
 
 class Dextable():
-    def __init__(self,pokemon_number: int):
-        if pokemon_number < 100:
-            self.html_text = requests.get(f'https://www.serebii.net/pokedex-sm/00{pokemon_number}.shtml').text
-        else:
-            self.html_text = requests.get(f'https://www.serebii.net/pokedex-sm/{pokemon_number}.shtml').text
+    def __init__(self, pokemon_number: int):
+        url = 'https://www.serebii.net/pokedex-sm/{}.shtml'.format(str(pokemon_number)).zfill(3)
+        self.html = requests.get(url)
+        self.soup = BeautifulSoup(self.html.text, 'html.parser')
+        self.number = '#{}'.format(str(pokemon_number).zfill(3))
+
+    def __basic_tables(self, division: int, select_table: Literal['foo','foo_info']) -> ResultSet:
+
+        assert division > 1, 'The number can not be higher than 1'
+
+        all_divs = self.soup.find_all('div', attrs={'align': 'center'})
+        foo = all_divs[division].find_all('td', {'class': 'foo'})
+        foo_info = all_divs[division].find_all('td', {'class': 'fooinfo'})
+
+        if select_table == 'foo':
+            return foo
+        elif select_table == 'foo_info':
+            return foo_info
+    
+    @with_location_info(0,'foo_info')
+    def get_name(self, location):
+        self._name = location[1].text
+    
+    @with_location_info(4,'foo_info')
+    def get_gender(self, location):
+        self.gender_info = []
+        genders = location.select('td.fooinfo font')
+
+        for gender in genders:
+            sym = gender.text
+            percentage = gender.find_next('td').text.strip()
+            self.gender_info.append(sym,percentage)
+    
+    @with_location_info(6,'foo_info')
+    def get_height(self, location):
+        height = location.br.next_sibling.text
+        self.height = height.split('\r\n\t\t\t').pop(1)
+    
+    @with_location_info(7,'foo_info')
+    def get_weight(self, location):
+        weight = location.br.next_sibling.text
+        self.weight = weight.split('\r\n\t\t\t').pop(1)
+    
+    @with_location_info(9,'foo_info')
+    def breeding_steps(self, location):
+        self.steps = location.text
+    
+    @with_location_info(10,'foo_info')
+    def get_abilities(self, location):
+        tags = location.find_all('b')
+
+        for tag in tags:
+            ability = tag.string
+
+            if ability == 'Hidden Ability':
+                continue
         
-        self.soup = BeautifulSoup(self.html_text, 'html.parser')
-    
-    def name_cleaning(self, string_with_name: List[str]) -> List[str]:
-        text_to_eliminate = '-','','Serebii.net','Pokédex'
-        cleaned_name = [element for element in string_with_name if element not in text_to_eliminate]
+            ability_text = ability.next_element.strip()
 
-        return cleaned_name
-
-    def get_name_nro(self):
-        self._name = self.soup.find('title').text.split()
-        cleaned_name = self.name_cleaning(self._name)
-        self._name, self._number = cleaned_name[0], cleaned_name[1]
-        self._number = int(re.sub(r'#', '', self._number))
+            abilities = [ability,ability_text]
+            self.abilities = ''.join(abilities)
     
-    @str_cleaning
-    def get_gender(self, strings):
-        male_sim, remaining = strings[1].split(':')
-        female_sim, f_percent = strings[2].split(':')
-        m_percent, female = remaining.split('%')
-        f_percent = f_percent.split('%')
+    @with_location_info(15,'foo_info')
+    def egg_group(self, location):
 
-        self.male = strings[0]
-        self.male_sim = male_sim.strip()
-        self.m_percent = m_percent.strip()
-        self.female = female.split()
-        self.female_sim = female_sim.split()
-    
-    @basic_table
-    def get_type(self):
-        types = []
-        for element in self.table[1].find_all('td', class_ = 'cen'):
-            text_value = element
-            for i in text_value:
-                types.append(i)
-        
-        if len(types) == 2:
-            multi_list = [types[0].img['alt'].split('-type'),types[2].img['alt'].split('-type')]
-            self.elemental_type = [item for sublist in multi_list for item in sublist]
-        else:
-            self.elemental_type = types.pop(0)
+        quantity = len(location.find_all('form'))
+
+        if quantity > 1:
+            counter = 0
+            for formulary in location:
+                box = formulary.find('form', {'name': 'breed'}).find_all('option')
+                parent = [p.text for p in box]
+                counter += 1
