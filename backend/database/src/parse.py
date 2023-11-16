@@ -1,98 +1,79 @@
 # Standard libraries of Python
-import re
+
+from typing import List
+from time import gmtime
 
 # Dependencies
 import pandas as pd
+import requests
+import re
+
 from pandas import DataFrame
-from typing import List
+from bs4 import BeautifulSoup
 
-elemental_types = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fight', 'Poison', 'Ground', 'Flying', 'Psychc', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy']
+assert requests.get("https://www.serebii.net/index2.shtml").status_code == 200, 'There is a problem with Serebii webpage'
 
-def s_modify(pokemons: str):
-    result = re.sub(r'(?<=[a-z])(?=[A-Z])', ',', str(pokemons))
-    result = result[2:-2]
-    result = result.split(',')
-    result = result[1:]
+def str_cleaning(func):
+    def wrapper(self):
+        table = self.soup.find_all('table', class_='dextable')
+        strings = table[1].find_all('table')[2].text.split()
+        part_1, part_2 = func(self, strings)
 
-    return result
+        return part_1, part_2
 
-def identity(df: List[DataFrame]) -> DataFrame:
-    name = df[36]
-    name.drop(columns=[1],index=[0],inplace=True)
+    return wrapper
 
-    return name
+def basic_table(func):
+    def wrapper(self):
+        self.table = self.soup.find_all('table', class_='dextable')
+        return func(self)
 
-def gender(df: List[DataFrame]) -> DataFrame:
-    gender = df[38]
-    gender = gender.set_index(0).T
+    return wrapper
 
-    return gender
-
-def weight(df: List[DataFrame]):
-    height_weight = df[40]
-    height_weight.columns = height_weight.iloc[0]
-    height_weight = height_weight[1:]
-    height_weight = height_weight.apply(lambda col: col.str.split().str[1])
-
-    return height_weight
-
-def hab(df: List[DataFrame]):
-    abilities = df[9]
-    criteria = '. Hidden Ability (Available through transfer): '
-    abilities = abilities.loc[1,1].split(criteria)
-    hab_df = pd.DataFrame([
-        {'Ability': abilities[0], 'Hidden Ability': abilities[1]}
-    ])
-
-    return hab_df
-
-def weaknesses(df: List[DataFrame]):
-    weaknesses = df[10]
-    weaknesses.drop(index=0, inplace=True)
-    weaknesses = weaknesses.reset_index(drop=True)
-    weaknesses.iloc[0] = elemental_types
-    weaknesses.columns = ['weaknesses'] * len(weaknesses.columns)
-
-    return weaknesses
-
-def egg_group(df: List[DataFrame]):
-    egg_group = df[13]
-    amount = len(egg_group)
-
-    match amount:
-        case 2:
-
-            groups = range(0,2)
-
-            for group in groups:
-                group_1 = egg_group.loc[group,0].split()
-                group_1 = s_modify(group_1)
-
-                group_2 = egg_group.loc[group,0].split()
-                group_2 = s_modify(group_2)
-            
-            egg_df = pd.DataFrame([
-                {'1': group_1,
-                 '2': group_2}
-            ])
-            
-            return egg_df
+class Dextable():
+    def __init__(self,pokemon_number: int):
+        if pokemon_number < 100:
+            self.html_text = requests.get(f'https://www.serebii.net/pokedex-sm/00{pokemon_number}.shtml').text
+        else:
+            self.html_text = requests.get(f'https://www.serebii.net/pokedex-sm/{pokemon_number}.shtml').text
         
-        case 1:
-            
-            group = egg_group.loc[0,0]
-            group = s_modify(group)
+        self.soup = BeautifulSoup(self.html_text, 'html.parser')
+    
+    def name_cleaning(self, string_with_name: List[str]) -> List[str]:
+        text_to_eliminate = '-','','Serebii.net','Pokédex'
+        cleaned_name = [element for element in string_with_name if element not in text_to_eliminate]
 
-            egg_df = pd.DataFrame([
-                {'1': group}
-            ])
+        return cleaned_name
+
+    def get_name_nro(self):
+        self._name = self.soup.find('title').text.split()
+        cleaned_name = self.name_cleaning(self._name)
+        self._name, self._number = cleaned_name[0], cleaned_name[1]
+        self._number = int(re.sub(r'#', '', self._number))
+    
+    @str_cleaning
+    def get_gender(self, strings):
+        male_sim, remaining = strings[1].split(':')
+        female_sim, f_percent = strings[2].split(':')
+        m_percent, female = remaining.split('%')
+        f_percent = f_percent.split('%')
+
+        self.male = strings[0]
+        self.male_sim = male_sim.strip()
+        self.m_percent = m_percent.strip()
+        self.female = female.split()
+        self.female_sim = female_sim.split()
+    
+    @basic_table
+    def get_type(self):
+        types = []
+        for element in self.table[1].find_all('td', class_ = 'cen'):
+            text_value = element
+            for i in text_value:
+                types.append(i)
         
-            return egg_df
-        
-        case _:
-
-            egg_df = pd.DataFrame([
-                {'1': 'This pokémon can not breed'}
-            ])
-
-            return egg_df
+        if len(types) == 2:
+            multi_list = [types[0].img['alt'].split('-type'),types[2].img['alt'].split('-type')]
+            self.elemental_type = [item for sublist in multi_list for item in sublist]
+        else:
+            self.elemental_type = types.pop(0)
