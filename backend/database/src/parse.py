@@ -1,5 +1,5 @@
-# Special Functions in order for main class more legible
-
+# Special Functions in order for main class to be more readable
+import re
 from typing import Literal
 from bs4 import Tag,ResultSet
 
@@ -12,48 +12,105 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_fo
     - gen: Generation.
     - main_table: This is BeautifulSoup HTML.text parser that contains all the information.
     - class_name: The class that needs to be located in the HTML.
-    - normal_form: WARNING! This only applies if the Pokémon contains a Mega Evolution. This value comes preloaded from the Mega Pokemon class.\n
+    - normal_form: WARNING! This only applies if the Pokémon contains a Mega Evolution. This value comes preloaded from the Mega Pokemon class.
     The flag cames with None from default, so it does not need change.
     - index: Proper location of the table. Do not give any value, unless you know what you are doing, in the main center distribution of the webpage.
     
     """
     match normal_form:
         case None:
-            if gen != 8:
+            if gen < 8:
                 return main_table[index].find_all('td', {'class': class_name})
-            else:
+            elif gen >= 8:
                 return main_table[index + 1].find_all('td', {'class': class_name})
             
         case 'form':
-            if gen != 8:
+            if gen < 8:
                 return main_table[index].find_all('table', {'class': 'dextable'})
+            else:
+                raise ValueError("Error. Parameter with no posible resolve")
 
-def get_elemental_types(location:Tag, info:Literal['weakness'], form:str=None, elements:list=None) -> list:
+def find_word(tag):
+    text = tag.name == 'td' and 'Form' in tag.text
+    text_1 = tag.name == 'td' and 'Standard' in tag.text
+
+    if text:
+        return text
+    else:
+        return text_1
+
+def find_atribute(location):
+    return location.br.next_sibling.text.split('\r\n\t\t\t').pop(1)
+
+def remove_string(data: list):
+    s = 'Attacking Move Type: ','-type'
+    for string in s:
+        data = list(map(lambda x: x.replace(string,''),data))
+
+    return data
+
+def list_of_elements(location:Tag):
+    types = []
+    location = location[0:18]
+
+    for tag in location:
+        a_tag = tag.find('img')
+        if a_tag and not isinstance(a_tag,Tag):
+            continue
+
+        else:
+            type_text = a_tag['alt']
+            types.append(type_text)
+    
+    types = remove_string(types)
+    
+    return types
+
+def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None) -> list:
     match form:
         case None:
-            types = []
-            if info == 'weakness':
-                location = location[0:18]
+            base_form = []
+            regional_form = []
 
-            for tag in location:
-                a_tag = tag.find('img')
-                if a_tag and not isinstance(a_tag,Tag):
-                    continue
-                else:
-                    print(f'aqui se busca el tipo {a_tag}')
-                    type_text = a_tag['alt']
-                    types.append(type_text)
+            if location.find(string='Normal'):
+                main = location.find_all('td')
 
-            s = 'Attacking Move Type: ','-type'
-            for string in s:
-                types = list(map(lambda x: x.replace(string,''),types))
+                for index,tag in enumerate(main):
+                    lazy = tag.text.strip()
+
+                    if 'Normal' in lazy:
+                        basic = main[index+1].find('img')
+                        type_text = basic['alt']
+                        base_form.append(type_text)
+                    elif lazy:
+                        basic = main[index+1].find_all('img')
+                        for e in basic:
+                            type_text = e['alt']
+                            regional_form.append(type_text)
+                
+                base_form = remove_string(base_form)
+                regional_form = remove_string(regional_form)
+
+                return {'normal': base_form, 'regional': regional_form}
             
-            return types
+            else:
+                types = []
+                for tag in location:
+                    a_tag = tag.find('img')
+                    if a_tag and not isinstance(a_tag,Tag):
+                        continue
+                    else:
+                        type_text = a_tag['alt']
+                        types.append(type_text)
+                types = remove_string(types)
+                
+                return types
         
-        case form:
+        case 'mega':
             types = []
             for tag in location:
                 a_tag = tag.find('img')
+
                 if a_tag and not isinstance(a_tag,Tag):
                     continue
                 else:
@@ -65,6 +122,55 @@ def get_elemental_types(location:Tag, info:Literal['weakness'], form:str=None, e
                         types.append(element)
             
             return types
+
+def filter_types(locations:list):
+    elements = [tag.text for tag in locations if '*' in tag.get_text(strip=True)]
+    v = list(map(lambda x: x.replace('*',''),elements))
+
+    return v
+
+def form_standard_case(main:ResultSet,word:str) -> list:
+
+    result_set = main.find_all('td')
+
+    normal = []
+    regional = []
+
+    regex_patern = fr'\d+\.\d+{word}'
+
+    lazy = result_set[0].text.strip()
+
+    if 'Form' in lazy:
+        for index,_ in enumerate(result_set):
+
+            match = re.search(regex_patern, result_set[index+2].text)
+            
+            if match:
+                data = match.group()
+                if index % 2 == 0:
+                    normal.append(data)
+                else:
+                    regional.append(data)
+                
+                if normal and regional:
+                    break
+        
+        return normal,regional
+
+    elif 'Standard' in lazy:
+        match = re.search(regex_patern, result_set[index+1].text)
+
+        if match:
+            data = match.group()
+            normal.append(data)
+        
+        return normal
+
+def get_filters(location:list):
+    normal_val = filter_types(location[18:36])
+    regional_val = filter_types(location[36:55])
+
+    return normal_val,regional_val
 
 def get_parents(parents:list) -> dict:
     pokemon_groups = {}
@@ -116,7 +222,7 @@ def process_form_ability(tag:Tag, form_abilities_flag:bool):
 
 def stats_calculation(stat:str, base:int, EV:int=0, level:int=50, nature=1, IV=31):
     if stat == 'hp':
-        hp = ((IV+2*base+(EV/4))*level/100)+10+level
+        hp = ((IV + 2 * base + (EV / 4)) * level / 100) + 10 + level
         return hp
     else:
         st = (((IV + 2 * base + (EV/4) ) * level/100 ) + 5) * nature

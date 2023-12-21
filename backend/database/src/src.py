@@ -24,7 +24,8 @@ def gen_url(gen: int):
         5: 'pokedex-bw',
         6: 'pokedex-xy',
         7: 'pokedex-sm',
-        8: 'pokedex-swsh'
+        8: 'pokedex-swsh',
+        9: 'pokedex-sv'
     }
 
     return gens[gen]
@@ -57,9 +58,9 @@ class Pokemon():
             raise ValueError("If gen is 8 or greater, number_name should be a string.")
 
         chain = gen_url(gen)
-        if gen != 8:
+        if gen < 8:
             url = f'https://www.serebii.net/{chain}/{str(number_name).zfill(3)}.shtml'
-        else:
+        elif gen >= 8:
             url = f'https://www.serebii.net/{chain}/{number_name}/'
         
         self.html = requests.get(url)
@@ -90,6 +91,11 @@ class Pokemon():
             
             case 'elements':
                 return parse.find_table_by_class(self.gen,all_divs,'cen')
+
+    def __process_formulary(self, location:Tag, form_name:str):
+        box = location.find('form', {'name': form_name}).find_all('option')
+        parents = [p.text for p in box]
+        return parse.get_parents(parents)
    
     def name(self):
         """
@@ -150,29 +156,30 @@ class Pokemon():
         table = self.__basic_tables('elements')
         location = table[0]
 
-        self.p_elements = parse.get_elemental_types(location)
+        self.p_elements = parse.elemental_types(location)
 
-    def height(self):
+    def height_weight(self):
         """
-        It defines the height of the Pokémon. Just fun fact.
+        It defines the height of the Pokémon. Just fun fact.\n
+        It also defines the weight, because some moves use this information to calculate the damage
 
-        -p_height: height of Pokémon
-        """
-        table = self.__basic_tables('fooinfo')
-        location = table[6]
-        height = location.br.next_sibling.text
-        self.p_height = height.split('\r\n\t\t\t').pop(1)
+        Attributes:
+        - p_height: height of Pokémon
+        - p_weight: weight of Pokémon
 
-    def weight(self):
-        """
-        It defines the weight of the Pokémon. This matters because of some moves that works with this Attribute.
-
-        - p_weight: weight of Pokémon.
         """
         table = self.__basic_tables('fooinfo')
-        location = table[7]
-        weight = location.br.next_sibling.text
-        self.p_weight = weight.split('\r\n\t\t\t').pop(1)
+        location_h = table[6]
+        location_w = table[7]
+
+        text = location_h.find_all(parse.find_word)
+
+        if text:
+            self.p_height = parse.form_standard_case(location_h,'m')
+            self.p_weight = parse.form_standard_case(location_w,'kg')
+        else:
+            self.p_height = parse.find_atribute(location_h)
+            self.p_weight = parse.find_atribute(location_w)
 
     def capture_rate(self):
         table = self.__basic_tables('fooinfo')
@@ -207,11 +214,6 @@ class Pokemon():
                 form_abilities_flag = parse.process_form_ability(tag,form_abilities_flag)
                 parse.process_ability(tag,self.p_abilities,self.p_form_abilities,form_abilities_flag)
 
-    def __process_formulary(self, location:Tag, form_name:str):
-        box = location.find('form', {'name': form_name}).find_all('option')
-        parents = [p.text for p in box]
-        return parse.get_parents(parents)
-
     def egg_group(self):
         table = self.__basic_tables('fooinfo')
         location = table[15]
@@ -223,24 +225,34 @@ class Pokemon():
         else:
             self.p_parents_0 = self.__process_formulary(location,'breed')
     
-    def weakness(self):
-        effectiveness = []
-
-        location = self.__basic_tables('footype')
-
-        self.elemental_types = parse.get_elemental_types(location,'weakness')
-
-        filtered = [tag.text for tag in location[18:36] if '*' in tag.get_text(strip=True)]
-
-        val = list(map(lambda x: x.replace('*',''),filtered))
-
-        for i in val:
+    def get_list_of_weakness(self,types_values:list):
+        effectiviness = []
+        for i in types_values:
             try:
-                effectiveness.append(int(i))
+                effectiviness.append(int(i))
             except ValueError:
-                effectiveness.append(float(i))
+                effectiviness.append(float(i))
+        
+        return effectiviness
+    
+    def weakness(self):
+        location = self.__basic_tables('footype')
+        elemental_types = parse.list_of_elements(location)
 
-        self.p_weakness = dict(zip(self.elemental_types,effectiveness))
+        normal_val, regional_val = parse.get_filters(location)
+
+        normal_weakness = self.get_list_of_weakness(normal_val)
+        
+        if not regional_val:
+            regional_weakness = []
+        else:
+            regional_weakness = self.get_list_of_weakness(regional_val)
+
+        if not regional_weakness:
+            self.p_weakness = dict(zip(elemental_types,normal_weakness))
+        else:
+            self.p_normal_weakness = dict(zip(elemental_types,normal_weakness))
+            self.p_regional_weakness = dict(zip(elemental_types,regional_weakness))
     
     def stats(self):
         location = self.__basic_tables('bases')
@@ -263,7 +275,7 @@ class Mega_Pokemon():
 
         Attribute:
         
-        type_of_table: it contains the string that specifies the class to be located.
+        - type_of_table: it contains the string that specifies the class to be located.
 
         The main difference with Pokemon class, is that the Attribute form comes by default, so it does not need to change.
         
