@@ -11,7 +11,8 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_fo
 
     - gen: Generation.
     - main_table: This is BeautifulSoup HTML.text parser that contains all the information.
-    - class_name: The class that needs to be located in the HTML.
+    - class_name: The class that needs to be located in the HTML. If there is a None in the Mega evolution class,
+    is because the class_name does not matter in that case. Check the private method in Mega_Pokemon.
     - normal_form: WARNING! This only applies if the Pokémon contains a Mega Evolution. This value comes preloaded from the Mega Pokemon class.
     The flag cames with None from default, so it does not need change.
     - index: Proper location of the table. Do not give any value, unless you know what you are doing, in the main center distribution of the webpage.
@@ -118,7 +119,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
 
                 for element in elements:
                     ty = element.lower()
-                    if ty in a_tag:
+                    if ty in type_text:
                         types.append(element)
             
             return types
@@ -128,6 +129,12 @@ def filter_types(locations:list):
     v = list(map(lambda x: x.replace('*',''),elements))
 
     return v
+
+def get_filters(location:list):
+    normal_val = filter_types(location[18:36])
+    regional_val = filter_types(location[36:55])
+
+    return normal_val,regional_val
 
 def form_standard_case(main:ResultSet,word:str) -> list:
 
@@ -165,12 +172,6 @@ def form_standard_case(main:ResultSet,word:str) -> list:
             normal.append(data)
         
         return normal
-
-def get_filters(location:list):
-    normal_val = filter_types(location[18:36])
-    regional_val = filter_types(location[36:55])
-
-    return normal_val,regional_val
 
 def get_parents(parents:list) -> dict:
     pokemon_groups = {}
@@ -229,12 +230,12 @@ def stats_calculation(stat:str, base:int, EV:int=0, level:int=50, nature=1, IV=3
         return st
 
 def detect_new_forms(pokemon_name:str, main_table:ResultSet) -> (int|str):
-    #Get al tables from the main center table
-    tables = main_table[0].find_all('table', {'class': 'dextable'})
-
     #Search for the line that contains <td class="fooevo" colspan="6">
-    for i, table in enumerate(tables):
+    message = None
+    for i,table in enumerate(main_table):
         if table.find('td', {'class': 'fooevo', 'colspan': '6'}):
-            return i
-    
-    return f'{pokemon_name} does not have Mega'
+            message = f'{pokemon_name} has Mega'
+            return i,message
+        
+    message = f'{pokemon_name} does not have Mega'
+    return None,message

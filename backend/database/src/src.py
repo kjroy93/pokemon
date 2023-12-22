@@ -51,7 +51,6 @@ class Pokemon():
         please refer to them.
 
         """
-
         if gen < 8 and not isinstance(number_name, int):
             raise ValueError("If gen is less than 8, number_name should be an integer.")
         elif gen >= 8 and not isinstance(number_name, str):
@@ -67,6 +66,8 @@ class Pokemon():
         self.soup = BeautifulSoup(self.html.text, 'html.parser')
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
+        location = self.__basic_tables('footype')
+        self.elemental_types = parse.list_of_elements(location)
 
     def __basic_tables(self, type_of_table: str) -> ResultSet:
         """
@@ -237,10 +238,8 @@ class Pokemon():
     
     def weakness(self):
         location = self.__basic_tables('footype')
-        elemental_types = parse.list_of_elements(location)
 
         normal_val, regional_val = parse.get_filters(location)
-
         normal_weakness = self.get_list_of_weakness(normal_val)
         
         if not regional_val:
@@ -249,10 +248,10 @@ class Pokemon():
             regional_weakness = self.get_list_of_weakness(regional_val)
 
         if not regional_weakness:
-            self.p_weakness = dict(zip(elemental_types,normal_weakness))
+            self.p_weakness = dict(zip(self.elemental_types,normal_weakness))
         else:
-            self.p_normal_weakness = dict(zip(elemental_types,normal_weakness))
-            self.p_regional_weakness = dict(zip(elemental_types,regional_weakness))
+            self.p_normal_weakness = dict(zip(self.elemental_types,normal_weakness))
+            self.p_regional_weakness = dict(zip(self.elemental_types,regional_weakness))
     
     def stats(self):
         location = self.__basic_tables('bases')
@@ -268,43 +267,36 @@ class Pokemon():
 class Mega_Pokemon():
     def __init__(self, pokemon: Pokemon):
         self.pokemon = pokemon
-    
-    def __basic_tables(self, type_of_table:str, form:str='form') -> ResultSet:
-        """
-        Private method that specifies the classes to searcth in the HTML.text soup:
 
-        Attribute:
-        
-        - type_of_table: it contains the string that specifies the class to be located.
-
-        The main difference with Pokemon class, is that the Attribute form comes by default, so it does not need to change.
-        
-        """
         all_divs = self.pokemon.soup.find_all('div', attrs={'align': 'center'})
+        self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,None,'form')
+        self._position,result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
 
-        match type_of_table:
-            case type_of_table:
-                table = parse.find_table_by_class(self.pokemon.gen,all_divs,'fooinfo',form)
-                n_f_position = parse.detect_new_forms(self.pokemon.p_name,table)
-
-                if isinstance(n_f_position,str):
-                    raise ValueError(n_f_position)
-                
-                return table, n_f_position
-    
+        if 'does not have Mega' in result_message:
+            raise ValueError(result_message)
+        
     def name(self):
         try:
-            table,position = self.__basic_tables('fooinfo')
-            location = table[position+1].find('td', class_='fooinfo')
+            location = self._tables[self._position+1].find('td', class_='fooinfo')
             self.m_name = location.text
+
         except ValueError as e:
             print(f'Error: {e}')
     
     def elements(self):
         try:
-            table,position = self.__basic_tables('fooinfo')
-            location = table[position+1].find('td', class_='cen')
-            self.m_elements = parse.get_elemental_types(location,None,'yes',self.pokemon.elemental_types)
+            location = self._tables[self._position+1].find('td', class_='cen')
+            self.m_elements = parse.elemental_types(location,'mega',self.pokemon.elemental_types)
+
+        except ValueError as e:
+            print(f'Error: {e}')
+    
+    def ability(self):
+        try:
+            location = self._tables[self._position+2].find_all('b')
+            self.m_abilities = {'ability': []}
+            parse.process_ability(location[2], self.m_abilities, None, None)
+
         except ValueError as e:
             print(f'Error: {e}')
     
@@ -316,8 +308,7 @@ class Mega_Pokemon():
 
         else:
             try:
-                table,position = self.__basic_tables('fooinfo')
-                location = table[position+2]
+                location = self._tables[self._position+3]
                 filtered = list(filter(lambda x: '*' in x.text, location.find_all('td', {'class': 'footype'})))
                 filtered = [tag.text for tag in filtered if '*' in tag.get_text(strip=True)]
 
@@ -330,20 +321,20 @@ class Mega_Pokemon():
                         m_weak.append(float(i))
                 
                 self.m_weakness = dict(zip(self.pokemon.elemental_types,m_weak))
+
             except ValueError as e:
                 print(f'Error : {e}')
     
     def m_base(self):
         try:
-            table,position = self.__basic_tables('base')
-
-            bases = table[position+4].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+            bases = self._tables[self._position+4].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
             
             self.m_hp = int(bases[0].text)
             self.m_atk = int(bases[1].text)
             self.m_def = int(bases[2].text)
             self.m_sp_atk = int(bases[3].text)
             self.m_sp_def = int(bases[4].text)
-            self.m_spd = int(bases[5].text)  
+            self.m_spd = int(bases[5].text)
+
         except ValueError as e:
             print(f'Error: {e}')
