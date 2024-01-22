@@ -132,7 +132,7 @@ def filter_types(locations:list):
 
 def get_filters(location:list):
     normal_val = filter_types(location[18:36])
-    regional_val = filter_types(location[36:55])
+    regional_val = filter_types(location[36:54])
 
     return normal_val,regional_val
 
@@ -229,13 +229,14 @@ def stats_calculation(stat:str, base:int, EV:int=0, level:int=50, nature=1, IV=3
         st = (((IV + 2 * base + (EV/4) ) * level/100 ) + 5) * nature
         return st
 
-def detect_new_forms(pokemon_name:str, main_table:ResultSet) -> (int|str):
+def detect_new_forms(pokemon_name:str, main_table:ResultSet) -> tuple[list,str] | tuple[None,str]:
     #Search for the line that contains <td class="fooevo" colspan="6">
-    message = None
+    location = []
     for i,table in enumerate(main_table):
         if table.find('td', {'class': 'fooevo', 'colspan': '6'}):
-            message = f'{pokemon_name} has Mega'
-            return i,message
-        
-    message = f'{pokemon_name} does not have Mega'
-    return None,message
+            location.append(i)
+
+    if location:
+        return location,f'{pokemon_name} has Mega'
+    else:
+        return None,f'{pokemon_name} does not have Mega'
