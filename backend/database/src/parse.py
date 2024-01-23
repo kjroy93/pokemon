@@ -29,7 +29,7 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_fo
             if gen < 8:
                 return main_table[index].find_all('table', {'class': 'dextable'})
             else:
-                raise ValueError("Error. Parameter with no posible resolve")
+                raise ValueError("Error: Parameter with no possible resolution, because Mega Evolutions are not available in 8th Generation and onward")
 
 def find_word(tag):
     text = tag.name == 'td' and 'Form' in tag.text
@@ -130,11 +130,17 @@ def filter_types(locations:list):
 
     return v
 
-def get_filters(location:list):
-    normal_val = filter_types(location[18:36])
-    regional_val = filter_types(location[36:54])
+def get_filters(location:list,control:int=0):
+    if control == 0:
+        types_values = filter_types(location[18:36])
 
-    return normal_val,regional_val
+        return types_values
+    
+    elif control == 1:
+        normal_val = filter_types(location[18:36])
+        regional_val = filter_types(location[36:54])
+        
+        return normal_val,regional_val
 
 def form_standard_case(main:ResultSet,word:str) -> list:
 

@@ -1,15 +1,22 @@
 # Libraries
 from backend.database.src.src import Pokemon, Mega_Pokemon
 
-x = Pokemon(7,6)
+x = Pokemon(8,'zacian')
 x.name()
-x.weakness()
+print(x.p_name)
 x.elements()
+x.weakness()
+x.abilities()
 
 try:
     m = Mega_Pokemon(x)
+    m.elements()
+    m.ability()
+    m.weakness()
 except ValueError as e:
     print(f'Error: {e}')
+    
 
-m.ability()
-print(m.m_abilities)
+print(x.p_abilities)
+print(x.heroes)
+print(x.p_weakness)

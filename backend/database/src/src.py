@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Literal
 
 #Dependencies
 import requests
@@ -157,7 +157,55 @@ class Pokemon():
         table = self.__basic_tables('elements')
         location = table[0]
 
-        self.p_elements = parse.elemental_types(location)
+        if self.p_name == 'Rotom':
+            rotoms = location.text.split().pop(5)
+            rotom_forms = [variant[5:] + ' ' + 'Rotom' for variant in rotom_forms]
+            rotoms = ['Rotom'] + rotom_forms
+
+            self.rotom_elements = {form: [] for form in rotoms}
+
+            for rotom in rotoms:
+                r_location = location.find(string=rotom).next
+                element = parse.elemental_types(r_location)
+                self.rotom_elements[rotom] = element
+        
+        elif 'Zacian' or 'Zamazenta' in self.p_name:
+            strings = ['Hero of Many Battles', 'Crowned Sword', 'Crowned Shield']
+
+            if 'Zacian' in self.p_name:
+                forms = [strings[0],strings[1]]
+            elif 'Zamazenta' in self.p_name:
+                forms = [strings[0],strings[2]]
+            
+            self.heroes = {form: [] for form in forms}
+
+            for armor in forms:
+                if 'Hero ' in armor:
+                    hero = location.find(string=armor).next
+                    element = parse.elemental_types(hero)
+                    self.heroes[armor] = element
+                elif 'Crowned ' in armor:
+                    hero = location.find(string=armor).next
+                    element = parse.elemental_types(hero)
+                    self.heroes[armor] = element
+        
+        elif 'Urshifu' in self.p_name:
+            stlyes = location.text
+
+            first_style = stlyes[0:19]
+            second_style = stlyes[20:38]
+
+            strings = first_style + second_style
+
+            self.bear = {style: [] for style in strings}
+
+            for style in strings:
+                bear = location.find(string=style).next
+                element = parse.elemental_types(bear)
+                self.bear[style] = element
+        
+        else:
+            self.p_elements = parse.elemental_types(location)
 
     def height_weight(self):
         """
@@ -196,6 +244,9 @@ class Pokemon():
         self.p_abilities = {'ability': [], 'hidden_ability': []}
         self.p_form_abilities = {'ability': [], 'hidden_ability': []}
 
+        if self.p_name == 'Lycanroc':
+            self.p_third_form = {'ability': []}
+
         table = self.__basic_tables('fooinfo')
         location = table[10]
 
@@ -204,6 +255,7 @@ class Pokemon():
         skip_next_flag = False
         form_abilities_flag = False
 
+        counter = 0
         for tag in tags:
             if skip_next_flag:
                 skip_next_flag = False
@@ -211,9 +263,14 @@ class Pokemon():
 
             if "Hidden Ability" in tag.text:
                 skip_next_flag = parse.process_hidden_ability(tag,self.p_abilities,self.p_form_abilities,skip_next_flag,form_abilities_flag)
+            elif counter >= 7:
+                form_abilities_flag = parse.process_form_ability(tag,form_abilities_flag)
+                parse.process_ability(tag,self.p_abilities,self.p_third_form,form_abilities_flag)
             else:
                 form_abilities_flag = parse.process_form_ability(tag,form_abilities_flag)
                 parse.process_ability(tag,self.p_abilities,self.p_form_abilities,form_abilities_flag)
+                   
+            counter += 1
 
     def egg_group(self):
         table = self.__basic_tables('fooinfo')
@@ -226,7 +283,7 @@ class Pokemon():
         else:
             self.p_parents_0 = self.__process_formulary(location,'breed')
     
-    def get_list_of_weakness(self,types_values:list):
+    def __get_list_of_weakness(self,types_values:list):
         effectiviness = []
         for i in types_values:
             try:
@@ -239,19 +296,32 @@ class Pokemon():
     def weakness(self):
         location = self.__basic_tables('footype')
 
-        regional_weakness = None
+        if 'Zacian' or 'Zamazenta' in self.p_name:
+            info = self.heroes
+        elif 'Rotom' in self.p_name:
+            info = self.rotom_elements
+        elif 'Urshifu' in self.p_name:
+            info = self.bear
 
-        normal_val, regional_val = parse.get_filters(location)
-        normal_weakness = self.get_list_of_weakness(normal_val)
+        if info:
+            val = parse.get_filters(location,0)
+            weakness = self.__get_list_of_weakness(val)
+            self.p_weakness = dict(zip(self.elemental_types,weakness))
         
-        if regional_val:
-            regional_weakness = self.get_list_of_weakness(regional_val)
+        elif 'regional' in self.p_elements:
+            regional_weakness = None
 
-        if regional_weakness is None:
-            self.p_weakness = dict(zip(self.elemental_types,normal_weakness))
-        else:
+            normal_val, regional_val = parse.get_filters(location,1)
+            normal_weakness = self.__get_list_of_weakness(normal_val)
+            regional_weakness = self.__get_list_of_weakness(regional_val)
+
             self.p_normal_weakness = dict(zip(self.elemental_types,normal_weakness))
             self.p_regional_weakness = dict(zip(self.elemental_types,regional_weakness))
+
+        else:
+            val = parse.get_filters(location,0)
+            weakness = self.__get_list_of_weakness(val)
+            self.p_weakness = dict(zip(self.elemental_types,weakness))
     
     def stats(self):
         location = self.__basic_tables('bases')
@@ -272,97 +342,130 @@ class Mega_Pokemon():
         self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,None,'form')
         self._position,result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
         
-        if len(self._position) == 4:
+        if not self._position:
+            raise ValueError(result_message)
+        elif isinstance(self._position,list) and len(self._position) == 4:
             self._position = self._position[0:2]
         else:
             self._position = self._position[0]
-        
-        if 'does not have Mega' in result_message:
-            raise ValueError(result_message)
+
+    def __control(self):
+        if isinstance(self._position,int):
+            return 1
+        elif isinstance(self._position,list):
+            return len(self._position)
+        else:
+            raise ValueError("The data must be an integer or a list. Check the input.")
         
     def name(self):
         condition = len(self._position)
         match condition:
             case 2:
-
                 try:
                     names = []
                     for i in self._position:
                         location = self._tables[self._position[i]+1].find('td', class_='fooinfo')
                         names.append(location.text)
-                    
                     self.m_name_0, self.m_name_1 = [name for name in names]
-
                 except ValueError as e:
                     print(f'Error: {e}')
-            
             case 1:
-                
                 try:
                     location = self._tables[self._position+1].find('td', class_='fooinfo')
                     self.m_name = location.text
                 except ValueError as e:
                     print(f'Error: {e}')
 
-    def __process_element_location(self,position,point):
-        try:
-            location = self._tables[position+1].find('td', class_='cen')
-            
-            if point == 0:
-                return parse.elemental_types(location,'mega',self.pokemon.elemental_types)
-            else:
-                return parse.elemental_types(location,'mega',self.pokemon.elemental_types)
-            
-        except ValueError as e:
-            print(f'Error: {e}')
-
-            return None
-    
-    def elements(self):
-        condition = len(self._position)
-        match condition:
-            case 2:
-                self.m_elements_0 = self.__process_element_location(self._position[0],0)
-                self.m_elements_1 = self.__process_element_location(self._position[1],1)
-            case 1:
-                self.m_elements = self.__process_element_location(self._position[0],0)
-    
-    def ability(self):
-        condition = len(self._position)
-        match condition:
-            case 2:
+    def __process_element_location(self,position,element:Literal['element','ability','weakness']):
+        match element:
+            case 'element':
 
                 try:
-                    location = self._tables[self._position+2].find_all('b')
-                    self.m_abilities = {'ability': []}
-                    parse.process_ability(location[2], self.m_abilities, None, None)
-
+                    location = self._tables[position+1].find('td', class_='cen')
+                    
+                    return parse.elemental_types(location,'mega',self.pokemon.elemental_types)
+                
                 except ValueError as e:
                     print(f'Error: {e}')
+
+                    return None
+            
+            case 'ability':
+                try:
+                    location = self._tables[position+2].find_all('b')
+                    m_ability = {'ability': []}
+                    parse.process_ability(location[2],m_ability,None,None)
+                    
+                    return m_ability
+                
+                except ValueError as e:
+                    print(f'Error: {e}')
+
+                    return None
+            
+            case 'weakness':
+                m_weak = []
+                try:
+                    location = self._tables[position+3]
+                    filtered = list(filter(lambda x: '*' in x.text, location.find_all('td', {'class': 'footype'})))
+                    filtered = [tag.text for tag in filtered if '*' in tag.get_text(strip=True)]
+
+                    val = list(map(lambda x: x.replace('*',''),filtered))
+
+                    for i in val:
+                        try:
+                            m_weak.append(int(i))
+                        except ValueError:
+                            m_weak.append(float(i))
+                    
+                    m_weakness = dict(zip(self.pokemon.elemental_types,m_weak))
+
+                    return m_weakness
+                
+                except ValueError as e:
+                    print(f'Error: {e}')
+
+                    return None
+    
+    def elements(self):
+        condition = self.__control()
+
+        match condition:
+            case 2:
+                self.m_elements_0 = self.__process_element_location(self._position[0],'element')
+                self.m_elements_1 = self.__process_element_location(self._position[1],'element')
+            case 1:
+                self.m_elements = self.__process_element_location(self._position,'element')
+    
+    def ability(self):
+        condition = self.__control()
+
+        match condition:
+            case 2:
+                self.m_ability_0 = self.__process_element_location(self._position[0],'ability')
+                self.m_ability_1 = self.__process_element_location(self._position[1],'ability')
+            case 1:
+                self.m_ability = self.__process_element_location(self._position,'ability')
     
     def weakness(self):
-        m_weak = []
+        condition = self.__control()
 
-        if self.m_elements != self.pokemon.p_elements:
-            try:
-                location = self._tables[self._position+3]
-                filtered = list(filter(lambda x: '*' in x.text, location.find_all('td', {'class': 'footype'})))
-                filtered = [tag.text for tag in filtered if '*' in tag.get_text(strip=True)]
+        match condition:
+            case 2:
+                if self.m_elements_0 != self.pokemon.p_elements:
+                    self.m_weakness_0 = self.__process_element_location(self._position[0],'weakness')
+                else:
+                    self.m_elements_0 = self.pokemon.p_weakness
 
-                val = list(map(lambda x: x.replace('*',''),filtered))
-
-                for i in val:
-                    try:
-                        m_weak.append(int(i))
-                    except ValueError:
-                        m_weak.append(float(i))
-                
-                self.m_weakness = dict(zip(self.pokemon.elemental_types,m_weak))
-
-            except ValueError as e:
-                print(f'Error : {e}')
-        else:
-            self.m_weakness = self.pokemon.p_weakness
+                if self.m_elements_1 != self.pokemon.p_elements:
+                    self.m_weakness_1 = self.__process_element_location(self._position[1],'weakness')
+                else:
+                    self.m_weakness_1 = self.pokemon.p_weakness
+            case 1:
+                if self.m_elements != self.pokemon.p_elements:
+                    self.m_weakness = self.__process_element_location(self._position,'weakness')
+                else:
+                    self.m_weakness = self.pokemon.p_weakness
     
     def m_base(self):
         try:
