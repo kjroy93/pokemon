@@ -169,7 +169,7 @@ class Pokemon():
                 element = parse.elemental_types(r_location)
                 self.rotom_elements[rotom] = element
         
-        elif 'Zacian' or 'Zamazenta' in self.p_name:
+        elif self.p_name in ['Zacian','Zamazenta']:
             strings = ['Hero of Many Battles', 'Crowned Sword', 'Crowned Shield']
 
             if 'Zacian' in self.p_name:
@@ -195,7 +195,7 @@ class Pokemon():
             first_style = stlyes[0:19]
             second_style = stlyes[20:38]
 
-            strings = first_style + second_style
+            strings = [first_style,second_style]
 
             self.bear = {style: [] for style in strings}
 
@@ -296,7 +296,7 @@ class Pokemon():
     def weakness(self):
         location = self.__basic_tables('footype')
 
-        if 'Zacian' or 'Zamazenta' in self.p_name:
+        if self.p_name in ['Zacian','Zamazenta']:
             info = self.heroes
         elif 'Rotom' in self.p_name:
             info = self.rotom_elements
