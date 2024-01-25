@@ -53,27 +53,50 @@ def remove_string(data: list):
 def list_of_elements(location:Tag):
     types = []
     location = location[0:18]
+    elemental_types = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fight', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy']
+    minus = [elemental_type.lower() for elemental_type in elemental_types]
 
     for tag in location:
         a_tag = tag.find('img')
         if a_tag and not isinstance(a_tag,Tag):
             continue
 
-        else:
+        try:
             type_text = a_tag['alt']
             types.append(type_text)
+        except KeyError:
+            for i in minus:
+                type_text = a_tag['src']
+                if i in type_text:
+                    for e in elemental_types:
+                        if e == i.capitalize():
+                            types.append(e)
+                            break
+                    break
     
     types = remove_string(types)
     
     return types
 
-def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None) -> list:
+def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None):
+    forms = ['Alolan','Galarian','Hisuian','Paldean']
+
+    if any(regional in location.text.split() for regional in forms):
+
+        for i in forms:
+            t = location.find(string=i)
+            if isinstance(t,str):
+                regional = t
+                break
+
+        dictionary = {'Normal': [], regional: []}
+
     match form:
         case None:
-            base_form = []
-            regional_form = []
-
             if location.find(string='Normal'):
+                base_form = []
+                regional_form = []
+
                 main = location.find_all('td')
 
                 for index,tag in enumerate(main):
@@ -92,7 +115,10 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
                 base_form = remove_string(base_form)
                 regional_form = remove_string(regional_form)
 
-                return {'normal': base_form, 'regional': regional_form}
+                dictionary['Normal'] = base_form
+                dictionary[regional] = regional_form
+
+                return dictionary
             
             else:
                 types = []
@@ -126,9 +152,9 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
 
 def filter_types(locations:list):
     elements = [tag.text for tag in locations if '*' in tag.get_text(strip=True)]
-    v = list(map(lambda x: x.replace('*',''),elements))
+    v_int = list(map(lambda x: x.replace('*',''),elements))
 
-    return v
+    return v_int
 
 def get_filters(location:list,control:int=0):
     if control == 0:
@@ -141,6 +167,9 @@ def get_filters(location:list,control:int=0):
         regional_val = filter_types(location[36:54])
         
         return normal_val,regional_val
+    
+def make_dict(elemental:list,v:list):
+    return dict(zip(elemental,v))
 
 def form_standard_case(main:ResultSet,word:str) -> list:
 

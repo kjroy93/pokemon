@@ -6,6 +6,7 @@ import re
 from bs4 import BeautifulSoup,ResultSet,Tag
 
 from backend.database.src import parse
+from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex
 
 URL = "https://www.serebii.net/index2.shtml"
 
@@ -62,14 +63,15 @@ class Pokemon():
         elif gen >= 8:
             url = f'https://www.serebii.net/{chain}/{number_name}/'
         
-        self.html = requests.get(url)
-        self.soup = BeautifulSoup(self.html.text, 'html.parser')
+        self.html = requests.get(url).text
+        self.soup = BeautifulSoup(self.html, 'html.parser')
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
         location = self.__basic_tables('footype')
         self.elemental_types = parse.list_of_elements(location)
+        self._bases = []
 
-    def __basic_tables(self, type_of_table: str) -> ResultSet:
+    def __basic_tables(self, type_of_table:str) -> ResultSet:
         """
         Private method that specifies the classes to searcth in the HTML.text soup:
 
@@ -92,11 +94,6 @@ class Pokemon():
             
             case 'elements':
                 return parse.find_table_by_class(self.gen,all_divs,'cen')
-
-    def __process_formulary(self, location:Tag, form_name:str):
-        box = location.find('form', {'name': form_name}).find_all('option')
-        parents = [p.text for p in box]
-        return parse.get_parents(parents)
    
     def name(self):
         """
@@ -145,65 +142,46 @@ class Pokemon():
             percentage = gender.find_next('td').text.strip()
             gender_info_entry = f'{sym}: {percentage}'
             self.p_gender_info.append(gender_info_entry)
+
+    def _get_elemental_types(self, elements:list, html:Tag) -> dict[str,list]:
+        dictionary = {form: [] for form in elements}
+
+        for element in elements:
+            location = html.find(string=element).next
+            types = parse.elemental_types(location)
+            dictionary[element] = types
+        
+        return dictionary
     
     def elements(self):
         """
 
         It determines the elemental types of the Pokémon. This is basic in order to know weakness and STAB (explained later in Damage Calculation).
 
-        - p_elements: Elemental Type of Pokemon.
+        - p_elements: Elemental Types of Pokemon.
+        - rotoms_elements: Contain the elemental types of all forms of Rotom
+        - heroes: Contain the elemental types of Zacian & Zamazenta
+        - urshifu_styles: Contain the elemental types of Urshifu
 
         """
         table = self.__basic_tables('elements')
         location = table[0]
 
         if self.p_name == 'Rotom':
-            rotoms = location.text.split().pop(5)
-            rotom_forms = [variant[5:] + ' ' + 'Rotom' for variant in rotom_forms]
-            rotoms = ['Rotom'] + rotom_forms
-
-            self.rotom_elements = {form: [] for form in rotoms}
-
-            for rotom in rotoms:
-                r_location = location.find(string=rotom).next
-                element = parse.elemental_types(r_location)
-                self.rotom_elements[rotom] = element
+            self.rotom_types = rotom.rotom_types(location)
         
         elif self.p_name in ['Zacian','Zamazenta']:
-            strings = ['Hero of Many Battles', 'Crowned Sword', 'Crowned Shield']
-
-            if 'Zacian' in self.p_name:
-                forms = [strings[0],strings[1]]
-            elif 'Zamazenta' in self.p_name:
-                forms = [strings[0],strings[2]]
-            
-            self.heroes = {form: [] for form in forms}
-
-            for armor in forms:
-                if 'Hero ' in armor:
-                    hero = location.find(string=armor).next
-                    element = parse.elemental_types(hero)
-                    self.heroes[armor] = element
-                elif 'Crowned ' in armor:
-                    hero = location.find(string=armor).next
-                    element = parse.elemental_types(hero)
-                    self.heroes[armor] = element
+            self.heroes = heroes.heroes_types(location, self.p_name)
         
         elif 'Urshifu' in self.p_name:
-            stlyes = location.text
-
-            first_style = stlyes[0:19]
-            second_style = stlyes[20:38]
-
-            strings = [first_style,second_style]
-
-            self.bear = {style: [] for style in strings}
-
-            for style in strings:
-                bear = location.find(string=style).next
-                element = parse.elemental_types(bear)
-                self.bear[style] = element
+            self.urshifu_styles = urshifu.urshifu_styles(location)
         
+        elif 'Darmanitan' in self.p_name:
+            self.darmanitan_types = darmanitan.darmanitan_types(location,self.gen)
+        
+        elif 'Tauros' in self.p_name and self.gen >= 9:
+            self.tauros_types = tauros.tauros_types(location)
+
         else:
             self.p_elements = parse.elemental_types(location)
 
@@ -272,6 +250,11 @@ class Pokemon():
                    
             counter += 1
 
+    def __process_formulary(self, location:Tag, form_name:str):
+        box = location.find('form', {'name': form_name}).find_all('option')
+        parents = [p.text for p in box]
+        return parse.get_parents(parents)
+
     def egg_group(self):
         table = self.__basic_tables('fooinfo')
         location = table[15]
@@ -283,7 +266,12 @@ class Pokemon():
         else:
             self.p_parents_0 = self.__process_formulary(location,'breed')
     
-    def __get_list_of_weakness(self,types_values:list):
+    def _get_list_of_weakness(self, pokemon:str, values:list, elemental_types:list, tag:Tag):
+        if isinstance(pokemon,str):
+            types_values = parse.filter_types(tag)
+        else:
+            types_values = values
+
         effectiviness = []
         for i in types_values:
             try:
@@ -291,52 +279,88 @@ class Pokemon():
             except ValueError:
                 effectiviness.append(float(i))
         
-        return effectiviness
+        if pokemon:
+            dictionary = parse.make_dict(elemental_types,effectiviness)
+
+            return dictionary
+        
+        else:
+            return effectiviness
     
     def weakness(self):
         location = self.__basic_tables('footype')
+        info = None
 
-        if self.p_name in ['Zacian','Zamazenta']:
-            info = self.heroes
-        elif 'Rotom' in self.p_name:
-            info = self.rotom_elements
+        if self.p_name in ['Rotom','Zacian','Zamazenta','Urshifu','Darmanitan','Tauros','Hoopa','Calyrex','Necrozma']:
+            self.p_elements = 'init'
+        
+        if 'Rotom' in self.p_name:
+            self.rotom_weakness = rotom.rotom_weakness(location,self.elemental_types)
+        elif self.p_name in ['Zacian','Zamazenta']:
+            self.heroes_weakness = heroes.heroes_weakness(location,self.elemental_types)
         elif 'Urshifu' in self.p_name:
-            info = self.bear
+            info = self.urshifu_styles
+        elif 'Darmanitan' in self.p_name:
+            info = self.darmanitan_types
+        elif 'Tauros' in self.p_name:
+            info = self.tauros_types
 
-        if info:
+        elif info:
             val = parse.get_filters(location,0)
-            weakness = self.__get_list_of_weakness(val)
+            weakness = self._get_list_of_weakness(val)
             self.p_weakness = dict(zip(self.elemental_types,weakness))
         
         elif 'regional' in self.p_elements:
             regional_weakness = None
 
             normal_val, regional_val = parse.get_filters(location,1)
-            normal_weakness = self.__get_list_of_weakness(normal_val)
-            regional_weakness = self.__get_list_of_weakness(regional_val)
+            normal_weakness = self._get_list_of_weakness(normal_val)
+            regional_weakness = self._get_list_of_weakness(regional_val)
 
             self.p_normal_weakness = dict(zip(self.elemental_types,normal_weakness))
             self.p_regional_weakness = dict(zip(self.elemental_types,regional_weakness))
 
         else:
             val = parse.get_filters(location,0)
-            weakness = self.__get_list_of_weakness(val)
+            weakness = self._get_list_of_weakness(None,val,None,None)
             self.p_weakness = dict(zip(self.elemental_types,weakness))
+
+    def __process_bases(self, location):
+        p_hp = int(location[0].text)
+        p_atk = int(location[1].text)
+        p_def = int(location[2].text)
+        p_sp_atk = int(location[3].text)
+        p_sp_def = int(location[4].text)
+        p_spd = int(location[5].text)
+
+        return p_hp,p_atk,p_def,p_sp_atk,p_sp_def,p_spd
+
+    @property
+    def bases(self):
+        return self._bases
+    
+    @bases.setter
+    def bases(self, location):
+        bases_values = self.__process_bases(location)
+        self._bases.extend(bases_values)
     
     def stats(self):
-        location = self.__basic_tables('bases')
-        bases = location[0].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+        if self.gen < 8:
+            location = self.__basic_tables('bases')
+            bases = location[0].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
 
-        self.p_hp = int(bases[0].text)
-        self.p_atk = int(bases[1].text)
-        self.p_def = int(bases[2].text)
-        self.p_sp_atk = int(bases[3].text)
-        self.p_sp_def = int(bases[4].text)
-        self.p_spd = int(bases[5].text)
+            self.bases = bases
+
+        elif self.gen >= 8:
+            location = self.__basic_tables('bases')
+            bases = location[1].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+
+            self.bases = bases
 
 class Mega_Pokemon():
     def __init__(self, pokemon: Pokemon):
         self.pokemon = pokemon
+        self._bases = []
 
         all_divs = self.pokemon.soup.find_all('div', attrs={'align': 'center'})
         self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,None,'form')
@@ -376,10 +400,9 @@ class Mega_Pokemon():
                 except ValueError as e:
                     print(f'Error: {e}')
 
-    def __process_element_location(self,position,element:Literal['element','ability','weakness']):
+    def __process_element_location(self, position:int, element:Literal['element','ability','weakness']):
         match element:
             case 'element':
-
                 try:
                     location = self._tables[position+1].find('td', class_='cen')
                     
@@ -466,17 +489,45 @@ class Mega_Pokemon():
                     self.m_weakness = self.__process_element_location(self._position,'weakness')
                 else:
                     self.m_weakness = self.pokemon.p_weakness
+
+    def __process_bases(self, location):
+        p_hp = int(location[0].text)
+        p_atk = int(location[1].text)
+        p_def = int(location[2].text)
+        p_sp_atk = int(location[3].text)
+        p_sp_def = int(location[4].text)
+        p_spd = int(location[5].text)
+
+        return p_hp,p_atk,p_def,p_sp_atk,p_sp_def,p_spd
+    
+    @property
+    def bases(self):
+        return self._bases
+    
+    @bases.setter
+    def bases(self,location):
+        bases_values = self.__process_bases(location)
+        self._bases.extend(bases_values)
     
     def m_base(self):
-        try:
-            bases = self._tables[self._position+4].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
-            
-            self.m_hp = int(bases[0].text)
-            self.m_atk = int(bases[1].text)
-            self.m_def = int(bases[2].text)
-            self.m_sp_atk = int(bases[3].text)
-            self.m_sp_def = int(bases[4].text)
-            self.m_spd = int(bases[5].text)
+        condition = self.__control()
 
-        except ValueError as e:
-            print(f'Error: {e}')
+        match condition:
+            case 2:
+                try:
+                    bases_0 = self._tables[self._position[0]+4].find('td', string=re.compile('Base Stats - Total.*')).find_next_siblings('td')
+                    bases_1 = self._tables[self._position[1]+4].find('td', string=re.compile('Base Stats - Total.*')).find_next_siblings('td')
+
+                    self.bases = bases_0
+                    self.bases = bases_1
+
+                except ValueError as e:
+                    print(f'Error: {e}')
+            case 1:
+                try:
+                    bases = self._tables[self._position+4].find('td', string=re.compile('Base Stats - Total.*')).find_next_siblings('td')
+
+                    self.bases = bases
+
+                except ValueError as e:
+                    print(f'Error: {e}')
