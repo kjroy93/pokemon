@@ -63,8 +63,12 @@ class Pokemon():
         elif gen >= 8:
             url = f'https://www.serebii.net/{chain}/{number_name}/'
         
-        self.html = requests.get(url).text
-        self.soup = BeautifulSoup(self.html, 'html.parser')
+        self.html = requests.get(url)
+        if self.html.status_code == 200:
+            self.soup = BeautifulSoup(self.html.text, 'html.parser')
+        else:
+            raise ValueError('This Pokemon does not exist in web page')
+        
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
         location = self.__basic_tables('footype')
@@ -143,10 +147,10 @@ class Pokemon():
             gender_info_entry = f'{sym}: {percentage}'
             self.p_gender_info.append(gender_info_entry)
 
-    def _get_elemental_types(self, elements:list, html:Tag) -> dict[str,list]:
-        dictionary = {form: [] for form in elements}
+    def _get_elemental_types(self, texts:list, html:Tag) -> dict[str,list]:
+        dictionary = {form: [] for form in texts}
 
-        for element in elements:
+        for element in texts:
             location = html.find(string=element).next
             types = parse.elemental_types(location)
             dictionary[element] = types
@@ -181,6 +185,15 @@ class Pokemon():
         
         elif 'Tauros' in self.p_name and self.gen >= 9:
             self.tauros_types = tauros.tauros_types(location)
+        
+        elif 'Hoopa' in self.p_name:
+            self.hoopa_types = hoopa.hoopa_types(location)
+        
+        elif 'Necrozma' in self.p_name:
+            self.necrozma_types = necrozma.necrozma_types(location)
+        
+        elif 'Calyrex' in self.p_name:
+            self.calyrex_types = calyrex.calyrex_types(location)
 
         else:
             self.p_elements = parse.elemental_types(location)
@@ -289,26 +302,37 @@ class Pokemon():
     
     def weakness(self):
         location = self.__basic_tables('footype')
-        info = None
 
         if self.p_name in ['Rotom','Zacian','Zamazenta','Urshifu','Darmanitan','Tauros','Hoopa','Calyrex','Necrozma']:
             self.p_elements = 'init'
         
         if 'Rotom' in self.p_name:
-            self.rotom_weakness = rotom.rotom_weakness(location,self.elemental_types)
-        elif self.p_name in ['Zacian','Zamazenta']:
-            self.heroes_weakness = heroes.heroes_weakness(location,self.elemental_types)
-        elif 'Urshifu' in self.p_name:
-            info = self.urshifu_styles
-        elif 'Darmanitan' in self.p_name:
-            info = self.darmanitan_types
-        elif 'Tauros' in self.p_name:
-            info = self.tauros_types
+            self.rotom_weakness,self.hr_weakness,self.wr_weakness,self.fr_weakness,self.fanr_weakness,self.mr_weakness = rotom.rotom_weakness(location,self.elemental_types)
 
-        elif info:
-            val = parse.get_filters(location,0)
-            weakness = self._get_list_of_weakness(val)
-            self.p_weakness = dict(zip(self.elemental_types,weakness))
+        elif self.p_name in ['Zacian','Zamazenta']:
+            self.heroe_weakness,self.crowned_weakness = heroes.heroes_weakness(location,self.elemental_types)
+
+        elif 'Urshifu' in self.p_name:
+            self.single_weakness,self.rapid_weakness = urshifu.urshifu_weakness(location,self.elemental_types)
+
+        elif 'Darmanitan' in self.p_name:
+            match self.gen:
+                case 5 | 6 | 7:
+                    self.darmanitan_weakness,self.zen_mode_weakness = darmanitan.darmanitan_weakness(location,self.gen,self.elemental_types)
+                case 8 | 9:
+                    self.darmanitan_weakness,self.galar_darmanitan_weakness,self.zen_mode_weakness,self.galar_zen_weakness = darmanitan.darmanitan_weakness(location,self.gen,self.elemental_types)
+
+        elif 'Tauros' in self.p_name:
+            self.tauros_weakness,self.paldean_tauros_weakness,self.blaze_tauros_weakness,self.aqua_tauros_weakness = tauros.tauros_weakness(location,self.elemental_types)
+        
+        elif 'Hoopa' in self.p_name:
+            self.hoopa_c_weakness,self.hoopa_u_weakness = hoopa.hoopa_weakness(location,self.elemental_types)
+        
+        elif 'Necrozma' in self.p_name:
+            self.necrozma_n_weakness,self.necrozma_dusk_weakness,self.necrozma_dawn_weakness = necrozma.necrozma_weakness(location,self.elemental_types)
+        
+        elif 'Calyrex' in self.p_name:
+            self.calyrex_weakness,self.calyrex_i_weakness,self.calyrex_s_weakness = calyrex.calyrex_weakness(location,self.elemental_types)
         
         elif 'regional' in self.p_elements:
             regional_weakness = None

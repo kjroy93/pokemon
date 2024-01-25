@@ -50,11 +50,39 @@ def remove_string(data: list):
 
     return data
 
+def legacy_list_of_elements(a_tag:Tag):
+    elemental_types = [
+    'Normal',
+    'Fire',
+    'Water',
+    'Electric',
+    'Grass',
+    'Ice',
+    'Fight',
+    'Poison',
+    'Ground',
+    'Flying',
+    'Psychic',
+    'Bug',
+    'Rock',
+    'Ghost',
+    'Dragon',
+    'Dark',
+    'Steel',
+    'Fairy'
+    ]
+
+    minus = [elemental_type.lower() for elemental_type in elemental_types]
+
+    for n,i in enumerate(minus):
+        type_text = a_tag['src']
+        if i in type_text:
+
+            return minus[n]
+
 def list_of_elements(location:Tag):
     types = []
     location = location[0:18]
-    elemental_types = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fight', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy']
-    minus = [elemental_type.lower() for elemental_type in elemental_types]
 
     for tag in location:
         a_tag = tag.find('img')
@@ -65,14 +93,8 @@ def list_of_elements(location:Tag):
             type_text = a_tag['alt']
             types.append(type_text)
         except KeyError:
-            for i in minus:
-                type_text = a_tag['src']
-                if i in type_text:
-                    for e in elemental_types:
-                        if e == i.capitalize():
-                            types.append(e)
-                            break
-                    break
+            type_text = legacy_list_of_elements(a_tag)
+            types.append(type_text)
     
     types = remove_string(types)
     
@@ -127,10 +149,15 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
                     if a_tag and not isinstance(a_tag,Tag):
                         continue
                     else:
-                        type_text = a_tag['alt']
-                        types.append(type_text)
+                        try:
+                            type_text = a_tag['alt']
+                            types.append(type_text)
+                        except KeyError:
+                            type_text = legacy_list_of_elements(a_tag)
+                            types.append(type_text)
+
                 types = remove_string(types)
-                
+
                 return types
         
         case 'mega':

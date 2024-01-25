@@ -15,3 +15,16 @@ def urshifu_styles(location:Tag):
     urshifu_types = Pokemon._get_elemental_types(Pokemon,styles,location)
 
     return urshifu_types
+
+def urshifu_weakness(location:Tag, elemental_types:list):
+    from backend.database.src.src import Pokemon
+
+    values = location[18:]
+
+    single_strike = values[0:18]
+    rapid_strike = values[18:36]
+
+    single_strike_weakness = Pokemon._get_list_of_weakness(Pokemon,'urshifu',None,elemental_types,single_strike)
+    rapid_strike_wekaness = Pokemon._get_list_of_weakness(Pokemon,'urshifu',None,elemental_types,rapid_strike)
+
+    return single_strike_weakness,rapid_strike_wekaness
