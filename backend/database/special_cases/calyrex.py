@@ -11,7 +11,7 @@ def calyrex_types(location:Tag):
     calyrex_t = text.pop(0)
     calyrex = [calyrex_t] + forms
 
-    calyrex_types = Pokemon._get_elemental_types(Pokemon,calyrex,location)
+    calyrex_types = Pokemon._get_elemental_types(Pokemon,calyrex,location,'calyrex')
 
     return calyrex_types
 

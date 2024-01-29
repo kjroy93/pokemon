@@ -12,7 +12,7 @@ def urshifu_styles(location:Tag):
 
     styles = [first_style,second_style]
 
-    urshifu_types = Pokemon._get_elemental_types(Pokemon,styles,location)
+    urshifu_types = Pokemon._get_elemental_types(Pokemon,styles,location,'urshifu')
 
     return urshifu_types
 

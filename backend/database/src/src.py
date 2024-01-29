@@ -147,12 +147,12 @@ class Pokemon():
             gender_info_entry = f'{sym}: {percentage}'
             self.p_gender_info.append(gender_info_entry)
 
-    def _get_elemental_types(self, texts:list, html:Tag) -> dict[str,list]:
+    def _get_elemental_types(self, texts:list, html:Tag, pokemon:str=None) -> dict[str,list]:
         dictionary = {form: [] for form in texts}
 
         for element in texts:
             location = html.find(string=element).next
-            types = parse.elemental_types(location)
+            types = parse.elemental_types(location,pokemon=pokemon)
             dictionary[element] = types
         
         return dictionary

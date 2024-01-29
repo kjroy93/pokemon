@@ -100,7 +100,7 @@ def list_of_elements(location:Tag):
     
     return types
 
-def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None):
+def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None, pokemon:str=None):
     forms = ['Alolan','Galarian','Hisuian','Paldean']
 
     if any(regional in location.text.split() for regional in forms):
@@ -144,10 +144,16 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
             
             else:
                 types = []
+
                 for tag in location:
                     a_tag = tag.find('img')
                     if a_tag and not isinstance(a_tag,Tag):
                         continue
+                    
+                    if pokemon:
+                        type_text = legacy_list_of_elements(a_tag)
+                        types.append(type_text.capitalize())
+
                     else:
                         try:
                             type_text = a_tag['alt']
@@ -158,7 +164,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None)
 
                 types = remove_string(types)
 
-                return types
+            return types
         
         case 'mega':
             types = []
