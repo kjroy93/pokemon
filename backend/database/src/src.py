@@ -147,12 +147,12 @@ class Pokemon():
             gender_info_entry = f'{sym}: {percentage}'
             self.p_gender_info.append(gender_info_entry)
 
-    def _get_elemental_types(self, texts:list, html:Tag, pokemon:str=None) -> dict[str,list]:
+    def _get_elemental_types(self, texts:list, html:Tag, name:str=None) -> dict[str,list]:
         dictionary = {form: [] for form in texts}
 
         for element in texts:
             location = html.find(string=element).next
-            types = parse.elemental_types(location,pokemon=pokemon)
+            types = parse.elemental_types(location,pokemon=name)
             dictionary[element] = types
         
         return dictionary
@@ -371,15 +371,48 @@ class Pokemon():
     def stats(self):
         if self.gen < 8:
             location = self.__basic_tables('bases')
-            bases = location[0].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+            bases = location[0].find('td', string=re.compile("Base Stats - Total.*"))
 
-            self.bases = bases
+            if len(bases) > 1:
+                for base in bases:
+                    i = base.find_next_siblings('td')
+                    self.bases = i
+            else:
+                bases = bases.find_next_siblings('td')
+                self.bases = bases
 
         elif self.gen >= 8:
             location = self.__basic_tables('bases')
-            bases = location[1].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+            bases = location[1].find_all('td', string=re.compile("Base Stats - Total.*"))
 
-            self.bases = bases
+            if len(bases) > 1:
+                for base in bases:
+                    i = base.find_next_siblings('td')
+                    self.bases = i
+            else:
+                bases = location[1].find('td', string=re.compile("Base Stats - Total.*")).find_next_siblings('td')
+                self.bases = bases
+        
+        text_form = location[1].find_all('td', {'class': 'fooevo', 'colspan': '8'})
+
+        s = 'Stats - '
+        aspect = []
+        for i in text_form:
+            aspect.append(i.text.replace(s,''))
+
+        base = {i: [] for i in aspect}
+        for n,t in enumerate(aspect):
+            match n:
+                case 0:
+                    base[t] = self._bases[0:6]
+                case 1:
+                    base[t] = self._bases[6:12]
+                case 2:
+                    base[t] = self._bases[12:18]
+                case 3:
+                    base[t] = self._bases[18:24]
+        
+        self._bases = base
 
 class Mega_Pokemon():
     def __init__(self, pokemon: Pokemon):

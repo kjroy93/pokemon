@@ -78,7 +78,7 @@ def legacy_list_of_elements(a_tag:Tag):
         type_text = a_tag['src']
         if i in type_text:
 
-            return minus[n]
+            return minus[n].capitalize()
 
 def list_of_elements(location:Tag):
     types = []
@@ -152,7 +152,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                     
                     if pokemon:
                         type_text = legacy_list_of_elements(a_tag)
-                        types.append(type_text.capitalize())
+                        types.append(type_text)
 
                     else:
                         try:
