@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup,ResultSet,Tag
 
 from backend.database.src import parse
-from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex
+from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex, ogerpon
 
 URL = "https://www.serebii.net/index2.shtml"
 
@@ -194,6 +194,9 @@ class Pokemon():
         
         elif 'Calyrex' in self.p_name:
             self.calyrex_types = calyrex.calyrex_types(location)
+        
+        elif 'Ogerpon' in self.p_name:
+            self.ogerpon_types = ogerpon.ogerpon_types(location)
 
         else:
             self.p_elements = parse.elemental_types(location)
@@ -334,6 +337,9 @@ class Pokemon():
         elif 'Calyrex' in self.p_name:
             self.calyrex_weakness,self.calyrex_i_weakness,self.calyrex_s_weakness = calyrex.calyrex_weakness(location,self.elemental_types)
         
+        elif 'Ogerpon' in self.p_name:
+            self.ogerpon_t_m_w,self.ogerpon_h_m_w,self.ogerpon_w_m_w,self.ogerpon_c_m_w = ogerpon.ogerpon_weakness(location,self.elemental_types) 
+        
         elif 'regional' in self.p_elements:
             regional_weakness = None
 
@@ -398,21 +404,12 @@ class Pokemon():
         s = 'Stats - '
         aspect = []
         for i in text_form:
-            aspect.append(i.text.replace(s,''))
-
-        base = {i: [] for i in aspect}
-        for n,t in enumerate(aspect):
-            match n:
-                case 0:
-                    base[t] = self._bases[0:6]
-                case 1:
-                    base[t] = self._bases[6:12]
-                case 2:
-                    base[t] = self._bases[12:18]
-                case 3:
-                    base[t] = self._bases[18:24]
+            info = i.text.replace(s,'')
+            if info == 'Mega Evolution':
+                continue
+            aspect.append(info)
         
-        self._bases = base
+        self._bases = parse.process_multiple_bases(aspect,self._bases)
 
 class Mega_Pokemon():
     def __init__(self, pokemon: Pokemon):
@@ -445,7 +442,7 @@ class Mega_Pokemon():
                 try:
                     names = []
                     for i in self._position:
-                        location = self._tables[self._position[i]+1].find('td', class_='fooinfo')
+                        location = self._tables[i+1].find('td', class_='fooinfo')
                         names.append(location.text)
                     self.m_name_0, self.m_name_1 = [name for name in names]
                 except ValueError as e:
@@ -580,6 +577,9 @@ class Mega_Pokemon():
 
                 except ValueError as e:
                     print(f'Error: {e}')
+                
+                self._bases = parse.process_multiple_bases([self.m_name_0,self.m_name_1],self._bases)
+
             case 1:
                 try:
                     bases = self._tables[self._position+4].find('td', string=re.compile('Base Stats - Total.*')).find_next_siblings('td')

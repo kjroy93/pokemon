@@ -308,3 +308,18 @@ def detect_new_forms(pokemon_name:str, main_table:ResultSet) -> tuple[list,str] 
         return location,f'{pokemon_name} has Mega'
     else:
         return None,f'{pokemon_name} does not have Mega'
+    
+def process_multiple_bases(texts:list, bases:list):
+    stats = {i: [] for i in texts}
+    for n,t in enumerate(stats):
+        match n:
+            case 0:
+                stats[t] = bases[0:6]
+            case 1:
+                stats[t] = bases[6:12]
+            case 2:
+                stats[t] = bases[12:18]
+            case 3:
+                stats[t] = bases[18:24]
+    
+    return stats

@@ -1,7 +1,7 @@
 # Libraries
 from backend.database.src.src import Pokemon,Mega_Pokemon
 
-x = Pokemon(8,'charmander')
+x = Pokemon(9,'ogerpon')
 x.name()
 print(x.p_name)
 x.elements()
@@ -11,6 +11,7 @@ x.stats()
 
 try:
     m = Mega_Pokemon(x)
+    m.name()
     m.elements()
     m.ability()
     m.weakness()
