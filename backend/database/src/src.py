@@ -249,6 +249,9 @@ class Pokemon():
         skip_next_flag = False
         form_abilities_flag = False
 
+        if self.p_name == 'Ogerpon':
+            self.ogerpon_abilities = ogerpon.ogerpon_abilities(tags)
+
         counter = 0
         for tag in tags:
             if skip_next_flag:

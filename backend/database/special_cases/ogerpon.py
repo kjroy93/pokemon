@@ -1,5 +1,8 @@
 """class for ogerpon special case"""
 
+# Standard Libraries of Python
+from itertools import cycle
+
 # Dependencies
 from bs4 import Tag
 
@@ -29,3 +32,45 @@ def ogerpon_weakness(location:Tag, elemental_types:list):
     ogerpon_c_m_w = Pokemon._get_list_of_weakness(Pokemon,'ogerpon',None,elemental_types,ogerpon_c_m)
 
     return ogerpon_t_m_w,ogerpon_h_m_w,ogerpon_w_m_w,ogerpon_c_m_w
+
+def ogerpon_abilities(location:Tag):
+    mask_abilities = {}
+    terastallised_abilities = {}
+
+    terastallised_cicle = cycle(range(4))
+
+    for i in location:
+        father = i
+        ability = father.text
+        if ' Mask ' in ability:
+            mask_abilities[ability] = []
+            terastallised_abilities[ability] = []
+        else:
+            continue
+
+    for (i, ability) in enumerate(location):
+        try:
+            father = ability
+            ability = father.text
+
+            if ' Mask ' in ability:
+                continue
+
+            ability_text = father.next_element.next.strip()
+            to_join = [ability, ability_text]
+            result = ''.join(to_join)
+
+            if i < 8:
+                # Actualizar diccionario mask_abilities
+                master_key_index = (i-1) // 2
+                mask_key = list(mask_abilities.keys())[master_key_index]
+                mask_abilities[mask_key] = result
+            else:
+                # Actualizar diccionario terastallised_abilities
+                master_key_index = next(terastallised_cicle)
+                terastallised_key = list(terastallised_abilities.keys())[master_key_index]
+                terastallised_abilities[terastallised_key] = result
+
+        except TypeError as e:
+            print(f'{e}')
+            continue
