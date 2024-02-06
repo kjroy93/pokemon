@@ -43,7 +43,7 @@ def find_word(tag):
 def find_atribute(location):
     return location.br.next_sibling.text.split('\r\n\t\t\t').pop(1)
 
-def remove_string(data: list):
+def remove_string(data:list):
     s = 'Attacking Move Type: ','-type'
     for string in s:
         data = list(map(lambda x: x.replace(string,''),data))
@@ -189,7 +189,7 @@ def filter_types(locations:list):
 
     return v_int
 
-def get_filters(location:list,control:int=0):
+def get_filters(location:list, control:int=0):
     if control == 0:
         types_values = filter_types(location[18:36])
 
@@ -201,10 +201,10 @@ def get_filters(location:list,control:int=0):
         
         return normal_val,regional_val
     
-def make_dict(elemental:list,v:list):
+def make_dict(elemental:list, v:list):
     return dict(zip(elemental,v))
 
-def form_standard_case(main:ResultSet,word:str) -> list:
+def form_standard_case(main:ResultSet, word:str) -> list:
 
     result_set = main.find_all('td')
 

@@ -37,6 +37,7 @@ def ogerpon_abilities(location:Tag):
     mask_abilities = {}
     terastallised_abilities = {}
 
+    mask_cycle = cycle(range(4))
     terastallised_cicle = cycle(range(4))
 
     for i in location:
@@ -62,7 +63,7 @@ def ogerpon_abilities(location:Tag):
 
             if i < 8:
                 # Actualizar diccionario mask_abilities
-                master_key_index = (i-1) // 2
+                master_key_index = next(mask_cycle)
                 mask_key = list(mask_abilities.keys())[master_key_index]
                 mask_abilities[mask_key] = result
             else:

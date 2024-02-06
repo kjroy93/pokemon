@@ -309,7 +309,7 @@ class Pokemon():
     def weakness(self):
         location = self.__basic_tables('footype')
 
-        if self.p_name in ['Rotom','Zacian','Zamazenta','Urshifu','Darmanitan','Tauros','Hoopa','Calyrex','Necrozma']:
+        if self.p_name in ['Rotom','Zacian','Zamazenta','Urshifu','Darmanitan','Tauros','Hoopa','Calyrex','Necrozma','Ogerpon']:
             self.p_elements = 'init'
         
         if 'Rotom' in self.p_name:
