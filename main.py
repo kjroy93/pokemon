@@ -1,7 +1,7 @@
 # Libraries
 from backend.database.src.src import Pokemon,Mega_Pokemon
 
-x = Pokemon(9,'ogerpon')
+x = Pokemon(7,6)
 x.name()
 print(x.p_name)
 x.elements()

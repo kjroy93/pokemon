@@ -50,7 +50,7 @@ def remove_string(data:list):
 
     return data
 
-def legacy_list_of_elements(a_tag:Tag):
+def elements_atk(a_tag:Tag, control:int=None):
     elemental_types = [
     'Normal',
     'Fire',
@@ -72,13 +72,25 @@ def legacy_list_of_elements(a_tag:Tag):
     'Fairy'
     ]
 
+    types = [
+        'physical',
+        'special',
+        'other'
+    ]
+
     minus = [elemental_type.lower() for elemental_type in elemental_types]
 
-    for n,i in enumerate(minus):
+    if control == None:
+        text = minus
+    elif control == 1:
+        text = types
+    else:
+        raise ValueError('The Control variable must be 1 if you want to process atk types')
+
+    for n,i in enumerate(text):
         type_text = a_tag['src']
         if i in type_text:
-
-            return minus[n].capitalize()
+            return str(text[n].capitalize())
 
 def list_of_elements(location:Tag):
     types = []
@@ -93,7 +105,7 @@ def list_of_elements(location:Tag):
             type_text = a_tag['alt']
             types.append(type_text)
         except KeyError:
-            type_text = legacy_list_of_elements(a_tag)
+            type_text = elements_atk(a_tag)
             types.append(type_text)
     
     types = remove_string(types)
@@ -151,7 +163,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                         continue
                     
                     if pokemon:
-                        type_text = legacy_list_of_elements(a_tag)
+                        type_text = elements_atk(a_tag)
                         types.append(type_text)
 
                     else:
@@ -159,7 +171,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                             type_text = a_tag['alt']
                             types.append(type_text)
                         except KeyError:
-                            type_text = legacy_list_of_elements(a_tag)
+                            type_text = elements_atk(a_tag)
                             types.append(type_text)
 
                 types = remove_string(types)
