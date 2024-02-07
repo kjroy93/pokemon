@@ -5,7 +5,7 @@ import requests
 import re
 from bs4 import BeautifulSoup,ResultSet,Tag
 
-from backend.database.src import parse
+from .src import parse
 from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex, ogerpon
 
 URL = "https://www.serebii.net/index2.shtml"

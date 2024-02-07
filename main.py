@@ -1,9 +1,23 @@
 # Libraries
-from backend.database.src.src import Pokemon,Mega_Pokemon
+from backend.database.src.src import Pokemon,Mega_Pokemon,parse
 
 x = Pokemon(7,6)
 x.name()
 print(x.p_name)
+
+all_divs = x.soup.find_all('div', attrs={'align': 'center'})
+foo_info = all_divs[0].find_all('table', {'class': 'dextable'})
+
+info = []
+for i in foo_info[10].find_all('td'):
+    info.append(i)
+
+df = parse.pd_structure(info,quantity_of_columns=8)
+print(df)
+df = parse.pd_structure(action=1,df=df)
+df = parse.pd_structure(action=2,df=df)
+print(df)
+
 x.elements()
 x.weakness()
 x.stats()

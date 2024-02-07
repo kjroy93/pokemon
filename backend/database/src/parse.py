@@ -3,6 +3,9 @@ import re
 from typing import Literal
 from bs4 import Tag,ResultSet
 
+import pandas as pd
+from pandas import DataFrame
+
 def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_form:str=None, index:int=0) -> ResultSet:
     """
     Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class:
@@ -50,6 +53,58 @@ def remove_string(data:list):
 
     return data
 
+def filter_types(locations:list):
+    elements = [tag.text for tag in locations if '*' in tag.get_text(strip=True)]
+    v_int = list(map(lambda x: x.replace('*',''),elements))
+
+    return v_int
+
+def get_filters(location:list, control:int=0):
+    if control == 0:
+        types_values = filter_types(location[18:36])
+
+        return types_values
+    
+    elif control == 1:
+        normal_val = filter_types(location[18:36])
+        regional_val = filter_types(location[36:54])
+        
+        return normal_val,regional_val
+    
+def make_dict(elemental:list, v:list):
+    return dict(zip(elemental,v))
+
+def n_columns(number:int, moves:Literal['lv']=None):
+    match number:
+        case 9:
+            c_names = [
+                'level' if moves == 'lv' else 'tm_hm',
+                'atk_name',
+                'type',
+                'category',
+                'power',
+                'accuracy',
+                'pp',
+                'effect',
+                'description'
+            ]
+
+            return c_names
+        
+        case None:
+            c_names = [
+                'atk_name',
+                'type',
+                'category',
+                'power',
+                'accuracy',
+                'pp',
+                'effect',
+                'description'
+            ]
+
+            return c_names
+
 def elements_atk(a_tag:Tag, control:int=None):
     elemental_types = [
     'Normal',
@@ -72,7 +127,7 @@ def elements_atk(a_tag:Tag, control:int=None):
     'Fairy'
     ]
 
-    types = [
+    category = [
         'physical',
         'special',
         'other'
@@ -83,7 +138,7 @@ def elements_atk(a_tag:Tag, control:int=None):
     if control == None:
         text = minus
     elif control == 1:
-        text = types
+        text = category
     else:
         raise ValueError('The Control variable must be 1 if you want to process atk types')
 
@@ -92,6 +147,77 @@ def elements_atk(a_tag:Tag, control:int=None):
         if i in type_text:
             return str(text[n].capitalize())
 
+def pd_structure(lst:list=None, action:int=None, df:DataFrame=None, moves:Literal['lv']=None, quantity_of_columns:int=None, egg_moves:Literal['no']='yes'):
+    """
+    Method to convert move set to a DataFrame, that also treats the data type and the shape of the corresponding list.\n
+
+    Attributes:
+
+    - lst: it is a list of lists, that contains the Tag elements from the bs4 scrap from the webpage.
+    It can contain any number of dimensions, as the method converts it into the appropriate one.\n
+
+    - action: special character that must be a integer. This controls the route of the function:
+        - If it is default (None), it is going to return a DataFrame.\n
+        - If it is 1, is going to transfrom the data in the DataFrame to the corresponding type (str or int).\n
+        - If it is 2, converts columns of the given DataFrame (modeled by the shape of this same function, so the columns will be the same), to the corresponding type of data. That is, strictly to string type. Just for data coherence.\n
+
+    - df: The corresponding DataFrame to be treated for cases 1 and 2.\n
+    - moves: This determines the names of the columns of the DataFrame. The string 'lv' determines the first column as 'lv'. If it is None, the name will be 'tm_hm'.\n
+    - quantity_of_columns: self explanatory with the name of the attribute. It must be 9 if you put 'lv'. In any other case, please DO NOT change the value.\n
+    - egg_moves: this value determines if the case to eliminate the seventh element in every list, in the list of list (lst), is necessary.
+    """
+    match action:
+        case None:
+            info = lst[1:]
+            org = [item for sublist in info for item in sublist]
+            reshape = [
+                org[i:i+quantity_of_columns]
+                for i in range(0,len(org),quantity_of_columns)
+            ]
+
+            if quantity_of_columns == 9:
+                for i in reshape:
+                    if moves == None:
+                        i[0] = i[0].text
+                    
+                    i[1] = i[1].text
+                    i[2] = elements_atk(i[2])
+                    i[3] = elements_atk(i[3],1)
+
+            elif quantity_of_columns == 8:
+                for i in reshape:
+                    if egg_moves == 'yes':
+                        del i[7]
+
+                    i[0] = i[0].text
+                    i[1] = elements_atk(i[1])
+                    i[2] = elements_atk(i[2],1)
+            
+            if moves:
+                c_names = n_columns(quantity_of_columns,moves)
+            else:
+                c_names = n_columns(quantity_of_columns)
+        
+        case 1:
+            for i in df:
+                try:
+                    df[i] = df[i].apply(lambda x: x[0] if isinstance(x,list) else x)
+                    continue
+                except AttributeError:
+                    df[i] = df[i].apply(lambda x: int(x) if x.isdigit() else str(x))
+        
+        case 2:
+            typing = {
+                'atk_name': 'string',
+                'type': 'string',
+                'category': 'string',
+                'description': 'string'
+            }
+
+            df = df.astype(typing)
+    
+    return df if action is not None else pd.DataFrame(reshape,columns=c_names)
+        
 def list_of_elements(location:Tag):
     types = []
     location = location[0:18]
@@ -194,27 +320,6 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                         types.append(element)
             
             return types
-
-def filter_types(locations:list):
-    elements = [tag.text for tag in locations if '*' in tag.get_text(strip=True)]
-    v_int = list(map(lambda x: x.replace('*',''),elements))
-
-    return v_int
-
-def get_filters(location:list, control:int=0):
-    if control == 0:
-        types_values = filter_types(location[18:36])
-
-        return types_values
-    
-    elif control == 1:
-        normal_val = filter_types(location[18:36])
-        regional_val = filter_types(location[36:54])
-        
-        return normal_val,regional_val
-    
-def make_dict(elemental:list, v:list):
-    return dict(zip(elemental,v))
 
 def form_standard_case(main:ResultSet, word:str) -> list:
 
