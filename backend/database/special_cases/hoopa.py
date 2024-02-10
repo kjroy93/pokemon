@@ -4,7 +4,7 @@
 from bs4 import Tag
 
 def hoopa_types(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
     
     hoopas = location.text.strip().split()
     hoopa_form = [f'{hoopas[i]} {hoopas[i + 1]}' for i in range(0,len(hoopas),2)]
@@ -14,7 +14,7 @@ def hoopa_types(location:Tag):
     return hoopa_types
 
 def hoopa_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

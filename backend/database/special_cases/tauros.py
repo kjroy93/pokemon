@@ -4,7 +4,7 @@
 from bs4 import Tag
 
 def tauros_types(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     strings = ['Normal','Paldean']
 
@@ -19,7 +19,7 @@ def tauros_types(location:Tag):
     return tauros
 
 def tauros_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

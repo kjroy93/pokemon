@@ -5,7 +5,7 @@ from bs4 import Tag
 from typing import Type
 
 def heroes_types(location:Tag, name:Type[object]):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
     strings = ['Hero of Many Battles', 'Crowned Sword', 'Crowned Shield']
 
     if 'Zacian' in name:
@@ -18,7 +18,7 @@ def heroes_types(location:Tag, name:Type[object]):
     return hero
 
 def heroes_weakness(location:Tag, elemental_types:list) -> tuple[dict | list]:
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
     hero = values[0:18]

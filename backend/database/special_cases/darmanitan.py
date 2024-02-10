@@ -4,7 +4,7 @@
 from bs4 import Tag
 
 def darmanitan_types(location:Tag, gen:int):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     if gen < 8:
         strings = ['Normal','Zen Mode']
@@ -20,7 +20,7 @@ def darmanitan_types(location:Tag, gen:int):
         return darmanitan_types
 
 def darmanitan_weakness(location:Tag, gen:int, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

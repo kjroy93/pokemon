@@ -4,7 +4,7 @@
 from bs4 import Tag
 
 def urshifu_styles(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
     styles = location.text
 
     first_style = styles[0:19]
@@ -17,7 +17,7 @@ def urshifu_styles(location:Tag):
     return urshifu_types
 
 def urshifu_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

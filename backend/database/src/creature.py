@@ -1,10 +1,12 @@
+# Standard libraries of Python
 from typing import Tuple, Literal
 
-#Dependencies
+# Dependencies
 import requests
 import re
 from bs4 import BeautifulSoup,ResultSet,Tag
 
+# Libraries made for this proyect
 from backend.database.src import parse
 from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex, ogerpon
 
@@ -88,16 +90,19 @@ class Pokemon():
 
         match type_of_table:
             case 'fooinfo':
-                return parse.find_table_by_class(self.gen,all_divs,'fooinfo')
+                return parse.find_table_by_class(self.gen,all_divs,class_name=type_of_table)
             
             case 'footype':
-                return parse.find_table_by_class(self.gen,all_divs,'footype')
+                return parse.find_table_by_class(self.gen,all_divs,class_name=type_of_table)
             
             case 'bases':
                 return all_divs
             
             case 'elements':
-                return parse.find_table_by_class(self.gen,all_divs,'cen')
+                return parse.find_table_by_class(self.gen,all_divs,class_name='cen')
+            
+            case 'moveset':
+                return parse.find_table_by_class(self.gen,all_divs)
    
     def name(self):
         """
@@ -420,7 +425,7 @@ class Mega_Pokemon():
         self._bases = []
 
         all_divs = self.pokemon.soup.find_all('div', attrs={'align': 'center'})
-        self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,None,'form')
+        self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,normal_form='form')
         self._position,result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
         
         if not self._position:
@@ -546,16 +551,6 @@ class Mega_Pokemon():
                     self.m_weakness = self.__process_element_location(self._position,'weakness')
                 else:
                     self.m_weakness = self.pokemon.p_weakness
-
-    def __process_bases(self, location):
-        p_hp = int(location[0].text)
-        p_atk = int(location[1].text)
-        p_def = int(location[2].text)
-        p_sp_atk = int(location[3].text)
-        p_sp_def = int(location[4].text)
-        p_spd = int(location[5].text)
-
-        return p_hp,p_atk,p_def,p_sp_atk,p_sp_def,p_spd
     
     @property
     def bases(self):
@@ -563,7 +558,7 @@ class Mega_Pokemon():
     
     @bases.setter
     def bases(self,location):
-        bases_values = self.__process_bases(location)
+        bases_values = self.pokemon.__process_bases(location)
         self._bases.extend(bases_values)
     
     def m_base(self):

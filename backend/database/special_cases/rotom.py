@@ -3,7 +3,7 @@ from bs4 import Tag
 
 
 def rotom_types(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     rotoms = location.text.split()
     rotoms.pop(5)
@@ -15,7 +15,7 @@ def rotom_types(location:Tag):
     return rotoms_type
 
 def rotom_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

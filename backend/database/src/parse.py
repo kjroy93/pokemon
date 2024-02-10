@@ -6,7 +6,11 @@ from bs4 import Tag,ResultSet
 import pandas as pd
 from pandas import DataFrame
 
-def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_form:str=None, index:int=0) -> ResultSet:
+def number_generator(init:int):
+    for number in range(init,1000):
+        yield number
+
+def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, normal_form:str=None) -> ResultSet:
     """
     Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class:
 
@@ -24,15 +28,21 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str, normal_fo
     match normal_form:
         case None:
             if gen < 8:
-                return main_table[index].find_all('td', {'class': class_name})
+                return main_table[0].find_all('td', {'class': class_name})
             elif gen >= 8:
-                return main_table[index + 1].find_all('td', {'class': class_name})
+                return main_table[1].find_all('td', {'class': class_name})
             
         case 'form':
             if gen < 8:
-                return main_table[index].find_all('table', {'class': 'dextable'})
+                return main_table[0].find_all('table', {'class': 'dextable'})
             else:
                 raise ValueError("Error: Parameter with no possible resolution, because Mega Evolutions are not available in 8th Generation and onward")
+        
+        case 'moveset':
+            if gen < 8:
+                return main_table[0].find_all('table', {'class': 'dextable'})
+            elif gen >= 8:
+                return main_table[1].find_all('table', {'class': 'dextable'})
 
 def find_word(tag):
     text = tag.name == 'td' and 'Form' in tag.text
@@ -91,7 +101,7 @@ def n_columns(number:int, moves:Literal['lv']=None):
 
             return c_names
         
-        case None:
+        case _:
             c_names = [
                 'atk_name',
                 'type',
@@ -147,11 +157,30 @@ def elements_atk(a_tag:Tag, control:int=None):
         if i in type_text:
             return str(text[n].capitalize())
 
-def pd_structure(lst:list=None, action:int=None, df:DataFrame=None, moves:Literal['lv']=None, quantity_of_columns:int=None, egg_moves:Literal['no']='yes'):
+def columns_data_type(quantity_of_columns,reshape,egg_moves,moves):
+    if quantity_of_columns == 9:
+        for i in reshape:
+            if moves == None:
+                i[0] = i[0].text
+            
+            i[1] = i[1].text
+            i[2] = elements_atk(i[2])
+            i[3] = elements_atk(i[3],1)
+
+    elif quantity_of_columns == 8:
+        for i in reshape:
+            if egg_moves == 'yes':
+                del i[7]
+
+            i[0] = i[0].text
+            i[1] = elements_atk(i[1])
+            i[2] = elements_atk(i[2],1)
+
+def pd_structure(lst:list=None, action:int=None, df:DataFrame=None, moves:Literal['lv']=None, quantity_of_columns:int=9, egg_moves:Literal['no']='yes'):
     """
     Method to convert move set to a DataFrame, that also treats the data type and the shape of the corresponding list.\n
 
-    Attributes:
+    Parameters:
 
     - lst: it is a list of lists, that contains the Tag elements from the bs4 scrap from the webpage.
     It can contain any number of dimensions, as the method converts it into the appropriate one.\n
@@ -200,11 +229,9 @@ def pd_structure(lst:list=None, action:int=None, df:DataFrame=None, moves:Litera
         
         case 1:
             for i in df:
-                try:
-                    df[i] = df[i].apply(lambda x: x[0] if isinstance(x,list) else x)
-                    continue
-                except AttributeError:
-                    df[i] = df[i].apply(lambda x: int(x) if x.isdigit() else str(x))
+                df[i] = df[i].apply(lambda x: pd.to_numeric(x,errors='coerce',downcast='integer') if x.isdigit() else str(x))
+                df[i] = df[i].replace('—',0)
+                df[i] = df[i].replace('--',0)
         
         case 2:
             typing = {

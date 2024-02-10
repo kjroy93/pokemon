@@ -7,7 +7,7 @@ from itertools import cycle
 from bs4 import Tag
 
 def ogerpon_types(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     text = location.text.replace('\n', '').split()
     masks = [f'{text[i]} {text[i+1]}' for i in range(0,len(text),2)]
@@ -17,7 +17,7 @@ def ogerpon_types(location:Tag):
     return ogerpon_types
 
 def ogerpon_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 

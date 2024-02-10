@@ -4,7 +4,7 @@
 from bs4 import Tag
 
 def calyrex_types(location:Tag):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     text = location.text.strip().split()
     forms = [f'{text[i]} {text[i+1]}' for i in range(1,len(text),2)]
@@ -16,7 +16,7 @@ def calyrex_types(location:Tag):
     return calyrex_types
 
 def calyrex_weakness(location:Tag, elemental_types:list):
-    from backend.database.src.src import Pokemon
+    from backend.database.src.creature import Pokemon
 
     values = location[18:]
 
