@@ -10,22 +10,21 @@ def number_generator(init:int):
     for number in range(init,1000):
         yield number
 
-def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, normal_form:str=None) -> ResultSet:
+def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, search:Literal['form','moveset']=None) -> ResultSet:
     """
     Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class:
 
-    Requirements:
+    Attributes:
 
     - gen: Generation.
     - main_table: This is BeautifulSoup HTML.text parser that contains all the information.
-    - class_name: The class that needs to be located in the HTML. If there is a None in the Mega evolution class,
-    is because the class_name does not matter in that case. Check the private method in Mega_Pokemon.
-    - normal_form: WARNING! This only applies if the Pokémon contains a Mega Evolution. This value comes preloaded from the Mega Pokemon class.
-    The flag cames with None from default, so it does not need change.
-    - index: Proper location of the table. Do not give any value, unless you know what you are doing, in the main center distribution of the webpage.
-    
+    - class_name: The class that needs to be located in the HTML. If there is a None in the Mega evolution class, is because the class_name does not matter in that case. Check the method in Mega_Pokemon.
+    - search: WARNING! This only applies if you don´t need any class_name. If it´s None, it means that you want a class_name, not a table pre-constructed in this function.
+        - This applies in the following cases:
+        - Mega Pokemon.
+        - moveset
     """
-    match normal_form:
+    match search:
         case None:
             if gen < 8:
                 return main_table[0].find_all('td', {'class': class_name})
@@ -40,9 +39,11 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, norm
         
         case 'moveset':
             if gen < 8:
-                return main_table[0].find_all('table', {'class': 'dextable'})
+                table = main_table[0].find_all('table', {'class': 'dextable'})
+                return table
             elif gen >= 8:
-                return main_table[1].find_all('table', {'class': 'dextable'})
+                table = main_table[1].find_all('table', {'class': 'dextable'})
+                return table
 
 def find_word(tag):
     text = tag.name == 'td' and 'Form' in tag.text

@@ -73,17 +73,18 @@ class Pokemon():
         
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
-        location = self.__basic_tables('footype')
+        location = self._basic_tables('footype')
         self.elemental_types = parse.list_of_elements(location)
         self._bases = []
 
-    def __basic_tables(self, type_of_table:str) -> ResultSet:
+    def _basic_tables(self, type_of_table:Literal['fooinfo','footype','bases','elements','moveset']) -> ResultSet:
         """
-        Private method that specifies the classes to searcth in the HTML.text soup:
+        Method that specifies the classes to searcth in the HTML.text soup.\n
+        ¡WARNING! In case of 'elements', 'bases' and 'moveset', please, specify it in the parameter.
 
-        Attribute:
+        Parameter:
         
-        - type_of_table: it contains the string that specifies the class to be located.
+        - type_of_table: it contains the string that specifies the class or table to be located.
         
         """
         all_divs = self.soup.find_all('div', attrs={'align': 'center'})
@@ -102,7 +103,7 @@ class Pokemon():
                 return parse.find_table_by_class(self.gen,all_divs,class_name='cen')
             
             case 'moveset':
-                return parse.find_table_by_class(self.gen,all_divs)
+                return parse.find_table_by_class(self.gen,all_divs,search=type_of_table)
    
     def name(self):
         """
@@ -112,7 +113,7 @@ class Pokemon():
 
         - p_name: Pokémon name
         """
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[1]
         self.p_name = location.text
     
@@ -134,7 +135,7 @@ class Pokemon():
         """
         self.p_gender_info = []
         strings_to_search = 'Genderless','Unknown'
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[4]
 
         list_to_search = location.text.split()
@@ -173,7 +174,7 @@ class Pokemon():
         - urshifu_styles: Contain the elemental types of Urshifu
 
         """
-        table = self.__basic_tables('elements')
+        table = self._basic_tables('elements')
         location = table[0]
 
         if self.p_name == 'Rotom':
@@ -216,7 +217,7 @@ class Pokemon():
         - p_weight: weight of Pokémon
 
         """
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location_h = table[6]
         location_w = table[7]
 
@@ -230,12 +231,12 @@ class Pokemon():
             self.p_weight = parse.find_atribute(location_w)
 
     def capture_rate(self):
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[8]
         self.p_capture_rate = int(location.text)
     
     def breeding_steps(self):
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[9]
         self.p_egg_steps = int(location.text.replace(',',''))
 
@@ -246,7 +247,7 @@ class Pokemon():
         if self.p_name == 'Lycanroc':
             self.p_third_form = {'ability': []}
 
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[10]
 
         tags = location.find_all('b')
@@ -280,7 +281,7 @@ class Pokemon():
         return parse.get_parents(parents)
 
     def egg_group(self):
-        table = self.__basic_tables('fooinfo')
+        table = self._basic_tables('fooinfo')
         location = table[15]
         quantity = len(location.find_all('form'))
 
@@ -312,7 +313,7 @@ class Pokemon():
             return effectiviness
     
     def weakness(self):
-        location = self.__basic_tables('footype')
+        location = self._basic_tables('footype')
 
         if self.p_name in ['Rotom','Zacian','Zamazenta','Urshifu','Darmanitan','Tauros','Hoopa','Calyrex','Necrozma','Ogerpon']:
             self.p_elements = 'init'
@@ -363,7 +364,7 @@ class Pokemon():
             weakness = self._get_list_of_weakness(None,val,None,None)
             self.p_weakness = dict(zip(self.elemental_types,weakness))
 
-    def __process_bases(self, location):
+    def _process_bases(self, location):
         p_hp = int(location[0].text)
         p_atk = int(location[1].text)
         p_def = int(location[2].text)
@@ -379,12 +380,12 @@ class Pokemon():
     
     @bases.setter
     def bases(self, location):
-        bases_values = self.__process_bases(location)
+        bases_values = self._process_bases(location)
         self._bases.extend(bases_values)
     
     def stats(self):
         if self.gen < 8:
-            location = self.__basic_tables('bases')
+            location = self._basic_tables('bases')
             bases = location[0].find('td', string=re.compile("Base Stats - Total.*"))
 
             if len(bases) > 1:
@@ -396,7 +397,7 @@ class Pokemon():
                 self.bases = bases
 
         elif self.gen >= 8:
-            location = self.__basic_tables('bases')
+            location = self._basic_tables('bases')
             bases = location[1].find_all('td', string=re.compile("Base Stats - Total.*"))
 
             if len(bases) > 1:
@@ -425,7 +426,7 @@ class Mega_Pokemon():
         self._bases = []
 
         all_divs = self.pokemon.soup.find_all('div', attrs={'align': 'center'})
-        self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,normal_form='form')
+        self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,search='form')
         self._position,result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
         
         if not self._position:
@@ -460,7 +461,7 @@ class Mega_Pokemon():
                     location = self._tables[self._position+1].find('td', class_='fooinfo')
                     self.m_name = location.text
                 except ValueError as e:
-                    print(f'Error: {e}')
+                    print(f"Error: {e}")
 
     def __process_element_location(self, position:int, element:Literal['element','ability','weakness']):
         match element:
@@ -558,7 +559,7 @@ class Mega_Pokemon():
     
     @bases.setter
     def bases(self,location):
-        bases_values = self.pokemon.__process_bases(location)
+        bases_values = self.pokemon._process_bases(location)
         self._bases.extend(bases_values)
     
     def m_base(self):
