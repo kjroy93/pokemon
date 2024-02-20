@@ -11,9 +11,9 @@
 from typing import Tuple, Literal, Generator
 
 # Dependencies
+from bs4 import BeautifulSoup, ResultSet
 import pandas as pd
 import numpy as np
-from bs4 import ResultSet
 
 # Libraries made for this proyect
 from backend.database.src.parse import number_generator, elements_atk
@@ -50,8 +50,8 @@ class Moveset():
         for position in number_generator(8):
             try:
                 location = self.table[position].find_all('td')
-            except IndexError as e:
-                print(f"Internal function 'locations' fails, because position {e}")
+            except IndexError:
+                print(f"Internal function 'locations' fails, because position is out of range")
                 break
 
             for keyword, p_list in self._map.items():
@@ -96,9 +96,57 @@ class Moveset():
                 table.insert(10, 'N/A')
         
         def form_table_catt(table:list, atk_type:str=None):
-            if atk_type in ['TM','TR','Technical Machine','Technical Record']:
+            to_fill = []
+            match atk_type:
+                case 'TM'|'TR'|'Technical Machine'|'Technical Record':
+                    table = list(filter(lambda x: 'table' not in str(x[1]), enumerate(table)))
+                    table = list(map(lambda x: x[1], table))
 
-                pass
+                    i = 0
+                    while i < len(table):
+                        if hasattr(table[i+9],'get'):
+                            l = 11 if i == 0 or isinstance(table[i+9].get('alt',''),str) else 10
+                        else:
+                            l = 10
+
+                        if l == 10 and any(word in table[i+8].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']):
+                            fix = table[i:i+l]
+                            fix.insert(8 if 'Form' in table[i+8].get('alt','') else 9, 'N/A')
+                            to_fill.extend([fix])
+                        else:
+                            to_fill.extend([table[i:i+l]])
+                        i += l
+                    
+                    return to_fill
+                
+                case 'Egg Move':
+                    n = 7
+                    while n < len(table):
+                        html = str(table[n])
+                        soup = BeautifulSoup(html, 'html.parser')
+
+                        img_tag = soup.find_all('img')
+                        if img_tag:
+                            values = [img.get('alt') for img in img_tag]
+                            del table[n]
+
+                            for pos,value in enumerate(values):
+                                if pos < 1:
+                                    table.insert(n,value)
+                                else:
+                                    table.insert(n+1,value)
+
+                            n += 10
+                        else:
+                            n -= 7
+                            break
+
+                    n_org = table[0:n]
+                    org_2 = table[n:] # Needs to be fixed, because of BDSP Egg moves
+
+                    shape = [n_org[i:i+10] for i in range(0,len(n_org),10)]
+
+                    return shape
         
         f_x_map = {
             'Max': table_catt,
