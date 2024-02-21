@@ -150,18 +150,18 @@ class Moveset():
         
         f_x_map = {
             'Max': table_catt,
-            'Z': table_catt,
+            'Z': table_catt
         }
 
         f_y_map = {
-            "TM": form_table_catt,
-            "Technical Machine": form_table_catt,
-            "TR": form_table_catt,
-            "Technical Record": form_table_catt,
-            "Egg Move": form_table_catt,
-            "Move Tutor": form_table_catt,
-            "Max Move": form_table_catt,
-            "Z Move": form_table_catt
+            'TM': form_table_catt,
+            'Technical Machine': form_table_catt,
+            'TR': form_table_catt,
+            'Technical Record': form_table_catt,
+            'Egg Move': form_table_catt,
+            'Move Tutor': form_table_catt,
+            'Max Move': form_table_catt,
+            'Z Move': form_table_catt
         }
 
         if isinstance(table, list) and not form_control:
