@@ -124,7 +124,7 @@ def elements_atk(a_tag:Tag, control:int=None):
     'Electric',
     'Grass',
     'Ice',
-    'Fight',
+    'Fighting',
     'Poison',
     'Ground',
     'Flying',

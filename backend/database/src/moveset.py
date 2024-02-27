@@ -120,33 +120,64 @@ class Moveset():
                     return to_fill
                 
                 case 'Egg Move':
-                    n = 7
-                    while n < len(table):
-                        html = str(table[n])
+                    reference = []
+                    i = 7
+                    while i < len(table):
+                        html = str(table[i])
                         soup = BeautifulSoup(html, 'html.parser')
 
                         img_tag = soup.find_all('img')
                         if img_tag:
                             values = [img.get('alt') for img in img_tag]
-                            del table[n]
+                            del table[i]
 
                             for pos,value in enumerate(values):
                                 if pos < 1:
-                                    table.insert(n,value)
+                                    table.insert(i,value)
                                 else:
-                                    table.insert(n+1,value)
+                                    table.insert(i+1,value)
 
-                            n += 10
+                            i += 10
+
+                        elif table[i].text == 'Details':
+                            del table[i]
+
+                            if not reference:
+                                reference.append(i-7)
+                            
+                            i += 8
+
+                        elif table[i+1].text == '':
+                            if self.pokemon.p_name == 'Raichu' and table[i].text == 'Volt Tackle':
+                                del table[i+7]
+
+                                exclusive_move_case = table[i:]
+                                reference.append(i)
+
+                                i += 9
+
+                                continue
+                            
+                            if len(reference) == 1:
+                                reference.append(i)
+
+                            del table[i+1]
+                            del table[i+8]
+
+                            i += 9
+                        
                         else:
-                            n -= 7
-                            break
+                            i -= 7
+                    
+                    form_egg_moves = table[0:reference[0]]
+                    eightgen_egg_moves = table[reference[0]:reference[1]]
+                    bdsp_egg_moves = table[reference[1]:reference[2]]
+                    exclusive_move_case = [exclusive_move_case]
 
-                    n_org = table[0:n]
-                    org_2 = table[n:] # Needs to be fixed, because of BDSP Egg moves
-
-                    shape = [n_org[i:i+10] for i in range(0,len(n_org),10)]
-
-                    return shape
+                    if exclusive_move_case:
+                        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves,exclusive_move_case
+                    else:
+                        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves
         
         f_x_map = {
             'Max': table_catt,
