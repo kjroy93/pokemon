@@ -1,4 +1,5 @@
-# Libraries
+# Dependencies
+import pandas as pd
 from bs4 import BeautifulSoup
 from backend.database.src.creature import Pokemon,Mega_Pokemon
 from backend.database.src.moveset import Moveset
@@ -73,22 +74,55 @@ for i in reversed(result):
 df = []
 i = 0
 while i < len(org):
+    # Let´s get the primary lenght of the table where the information of the move is located
     if hasattr(org[i+3],'get'):
         l = 11 if i == 0 or isinstance(org[i+8].get('alt',''),str) else 10
     else:
-        l = 10
+        l = 10 if any(word in org[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']) and hasattr(org[i+8],'get') else 9
         
-    if l == 10 and any(word in org[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']) and hasattr(org[i+8],'get'):
+    if l == 11:
         df.extend([org[i:i+l]])
-    elif l == 11:
-        df.extend([org[i:i+l]])
-    else:
-        fix = org[i:i+9]
-        fix.insert(7 if 'Form' in org[i+7].get('alt','') else 8, 'N/A')
-        fix.insert(2 if 'Special' in org[i+2].get('alt','') else 3, 'N/A')
-        df.extend([fix])
-        l = 9
         
+    elif l == 10:
+        fix = org[i:i+l]
+
+        for i in [1,2,3,8,9]:
+            match i:
+                case 1:
+                    element = any(word in parse.elements_atk(i,1) for word in x.elemental_types)
+                    if not element:
+                        fix.insert(i, 'N/A')
+                case 2 | 3:
+                    element = any(word in parse.elements_atk(i) for word in ['Physical', 'Other']) if i == 2 else any(word in parse.elements_atk(i) for word in ['Special'])
+                    if not element:
+                            fix.insert(i, 'N/A')
+                case 7 | 8:
+                    element = any(word in fix[i].get('alt','') for word in ['Normal']) if i == 7 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
+                    if not element:
+                        fix.insert(i, 'N/A')
+        
+        df.extend(fix)
+    
+    elif l == 9:
+        fix = org[i:i+l]
+
+        for i in [1,2,3,6,7]:
+            match i:
+                case 1:
+                    element = any(word in parse.elements_atk(i,1) for word in x.elemental_types)
+                    if not element:
+                        fix.insert(i, 'N/A')
+                case 2 | 3:
+                    element = any(word in parse.elements_atk(i) for word in ['Physical', 'Other']) if i == 2 else any(word in parse.elements_atk(i) for word in ['Special'])
+                    if not element:
+                            fix.insert(i, 'N/A')
+                case 6 | 7:
+                    element = any(word in fix[i].get('alt','') for word in ['Normal']) if i == 6 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
+                    if not element:
+                        fix.insert(i, 'N/A')
+        
+        df.extend(fix)
+
     i += l
 
 df = pd.DataFrame(df)
