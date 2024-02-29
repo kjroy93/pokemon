@@ -1,7 +1,7 @@
 # Special Functions in order for main class to be more readable
 import re
 from typing import Literal
-from bs4 import Tag,ResultSet
+from bs4 import BeautifulSoup, Tag, ResultSet, NavigableString
 
 import pandas as pd
 from pandas import DataFrame
@@ -17,7 +17,7 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, sear
     Attributes:
 
     - gen: Generation.
-    - main_table: This is BeautifulSoup HTML.text parser that contains all the information.
+    - main_table: This is BeautifulSoup HTML.text r that contains all the information.
     - class_name: The class that needs to be located in the HTML. If there is a None in the Mega evolution class, is because the class_name does not matter in that case. Check the method in Mega_Pokemon.
     - search: WARNING! This only applies if you don´t need any class_name. If it´s None, it means that you want a class_name, not a table pre-constructed in this function.
         - This applies in the following cases:
@@ -176,75 +176,6 @@ def columns_data_type(quantity_of_columns,reshape,egg_moves,moves):
             i[0] = i[0].text
             i[1] = elements_atk(i[1])
             i[2] = elements_atk(i[2],1)
-
-def pd_structure(lst:list=None, action:int=None, df:DataFrame=None, moves:Literal['lv']=None, quantity_of_columns:int=9, egg_moves:Literal['no']='yes'):
-    """
-    Method to convert move set to a DataFrame, that also treats the data type and the shape of the corresponding list.\n
-
-    Parameters:
-
-    - lst: it is a list of lists, that contains the Tag elements from the bs4 scrap from the webpage.
-    It can contain any number of dimensions, as the method converts it into the appropriate one.\n
-
-    - action: special character that must be a integer. This controls the route of the function:
-        - If it is default (None), it is going to return a DataFrame.\n
-        - If it is 1, is going to transfrom the data in the DataFrame to the corresponding type (str or int).\n
-        - If it is 2, converts columns of the given DataFrame (modeled by the shape of this same function, so the columns will be the same), to the corresponding type of data. That is, strictly to string type. Just for data coherence.\n
-
-    - df: The corresponding DataFrame to be treated for cases 1 and 2.\n
-    - moves: This determines the names of the columns of the DataFrame. The string 'lv' determines the first column as 'lv'. If it is None, the name will be 'tm_hm'.\n
-    - quantity_of_columns: self explanatory with the name of the attribute. It must be 9 if you put 'lv'. In any other case, please DO NOT change the value.\n
-    - egg_moves: this value determines if the case to eliminate the seventh element in every list, in the list of list (lst), is necessary.
-    """
-    match action:
-        case None:
-            info = lst[1:]
-            org = [item for sublist in info for item in sublist]
-            reshape = [
-                org[i:i+quantity_of_columns]
-                for i in range(0,len(org),quantity_of_columns)
-            ]
-
-            if quantity_of_columns == 9:
-                for i in reshape:
-                    if moves == None:
-                        i[0] = i[0].text
-                    
-                    i[1] = i[1].text
-                    i[2] = elements_atk(i[2])
-                    i[3] = elements_atk(i[3],1)
-
-            elif quantity_of_columns == 8:
-                for i in reshape:
-                    if egg_moves == 'yes':
-                        del i[7]
-
-                    i[0] = i[0].text
-                    i[1] = elements_atk(i[1])
-                    i[2] = elements_atk(i[2],1)
-            
-            if moves:
-                c_names = n_columns(quantity_of_columns,moves)
-            else:
-                c_names = n_columns(quantity_of_columns)
-        
-        case 1:
-            for i in df:
-                df[i] = df[i].apply(lambda x: pd.to_numeric(x,errors='coerce',downcast='integer') if x.isdigit() else str(x))
-                df[i] = df[i].replace('—',0)
-                df[i] = df[i].replace('--',0)
-        
-        case 2:
-            typing = {
-                'atk_name': 'string',
-                'type': 'string',
-                'category': 'string',
-                'description': 'string'
-            }
-
-            df = df.astype(typing)
-    
-    return df if action is not None else pd.DataFrame(reshape,columns=c_names)
         
 def list_of_elements(location:Tag):
     types = []
@@ -468,3 +399,136 @@ def process_multiple_bases(texts:list, bases:list):
                 stats[t] = bases[18:24]
     
     return stats
+
+def form_tm_fix(table:list):
+    df = []
+    table = list(filter(lambda x: 'table' not in str(x[1]), enumerate(table)))
+    table = list(map(lambda x: x[1], table))
+
+    i = 0
+    while i < len(table):
+        if hasattr(table[i+9],'get'):
+            l = 11 if i == 0 or isinstance(table[i+9].get('alt',''),str) else 10
+        else:
+            l = 10
+
+        if l == 10 and any(word in table[i+8].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']):
+            fix = table[i:i+l]
+            fix.insert(8 if 'Form' in table[i+8].get('alt','') else 9, 'N/A')
+            df.extend([fix])
+        else:
+            df.extend([table[i:i+l]])
+        i += l
+    
+    return df
+
+def form_egg_fix(table:list, pokemon_name:str):
+    reference = []
+    i = 7
+    while i < len(table):
+        html = str(table[i])
+        soup = BeautifulSoup(html, 'html.parse')
+
+        img_tag = soup.find_all('img')
+        if img_tag:
+            values = [img.get('alt') for img in img_tag]
+            del table[i]
+
+            for pos,value in enumerate(values):
+                if pos < 1:
+                    table.insert(i,value)
+                else:
+                    table.insert(i+1,value)
+
+            i += 10
+
+        elif table[i].text == 'Details':
+            del table[i]
+
+            if not reference:
+                reference.append(i-7)
+            
+            i += 8
+
+        elif table[i+1].text == '':
+            if pokemon_name == 'Raichu' and table[i].text == 'Volt Tackle':
+                del table[i+7]
+
+                exclusive_move_case = table[i:]
+                reference.append(i)
+
+                i += 9
+
+                continue
+            
+            if len(reference) == 1:
+                reference.append(i)
+
+            del table[i+1]
+            del table[i+8]
+
+            i += 9
+        
+        else:
+            i -= 7
+    
+    form_egg_moves = table[0:reference[0]]
+    eightgen_egg_moves = table[reference[0]:reference[1]]
+    bdsp_egg_moves = table[reference[1]:reference[2]]
+    exclusive_move_case = [exclusive_move_case]
+
+    if exclusive_move_case:
+        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves,exclusive_move_case
+    else:
+        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves
+
+def form_max_z_move_fix(table:list, pokemon_elements:list):
+    def internal_function(fix: list):
+        for i in [1,2,3,8,9]:
+            if len(fix) == 11:
+                i = 11
+                break
+
+            match i:
+                case 1:
+                    element = any(word in elements_atk(fix[i]) for word in pokemon_elements)
+                    if not element:
+                        fix.insert(i, 'N/A')
+                case 2 | 3:
+                    if not isinstance(fix[i], NavigableString):
+                        element = any(word in elements_atk(fix[i],1) for word in ['Physical', 'Other']) if i == 2 else any(word in elements_atk(fix[i],1) for word in ['Special'])
+                        fix.insert(i, 'N/A') if not element and i == 2 else fix.insert(i, 'N/A') if isinstance(fix[i], NavigableString) and i == 3 else 'N/A'
+                    else:
+                        if i == 2:
+                            fix.insert(i, 'Other')
+                            fix.insert(i+1, 'N/A')
+                            fix.insert(i+2, '--')
+                        else:
+                            fix.insert(i, 'N/A')
+                case 8 | 9:
+                    element = any(word in fix[i].get('alt','') for word in ['Normal']) if i == 8 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
+                    if not element:
+                        fix.insert(i, 'N/A')
+        
+        return fix
+
+    df = []
+    i = 0
+    while i < len(table):
+        # Let´s get the primary lenght of the table where the information of the move is located
+        if hasattr(table[i+3],'get'):
+            l = 11 if i == 0 or isinstance(table[i+8].get('alt',''),str) else 10
+        else:
+            l = (10 if any(word in table[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(table[i+7], NavigableString)) and hasattr(table[i+8], 'get') else 9) if len(table) - i > 9 else 8
+            
+        if l == 11:
+            df.extend(table[i:i+l])
+            
+        elif l == 10 or l >= 8:
+            lst = table[i:i+l]
+            fixed = internal_function(lst)
+            df.extend([fixed])
+
+        i += l
+    
+    return df

@@ -1,6 +1,6 @@
 # Dependencies
 import pandas as pd
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag, NavigableString
 from backend.database.src.creature import Pokemon,Mega_Pokemon
 from backend.database.src.moveset import Moveset
 from backend.database.src import parse
@@ -66,8 +66,6 @@ for i,num in enumerate(patata):
     result.extend(pos)
     current_index += num
 
-print(result)
-
 for i in reversed(result):
     del org[i]
 
@@ -78,54 +76,46 @@ while i < len(org):
     if hasattr(org[i+3],'get'):
         l = 11 if i == 0 or isinstance(org[i+8].get('alt',''),str) else 10
     else:
-        l = 10 if any(word in org[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']) and hasattr(org[i+8],'get') else 9
-        
+        l = (10 if any(word in org[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(org[i+7], NavigableString)) and hasattr(org[i+8], 'get') else 9) if len(org) - i > 9 else 8
+
     if l == 11:
         df.extend([org[i:i+l]])
         
-    elif l == 10:
+    elif l == 10 or l >= 8:
         fix = org[i:i+l]
 
-        for i in [1,2,3,8,9]:
-            match i:
-                case 1:
-                    element = any(word in parse.elements_atk(i,1) for word in x.elemental_types)
-                    if not element:
-                        fix.insert(i, 'N/A')
-                case 2 | 3:
-                    element = any(word in parse.elements_atk(i) for word in ['Physical', 'Other']) if i == 2 else any(word in parse.elements_atk(i) for word in ['Special'])
-                    if not element:
-                            fix.insert(i, 'N/A')
-                case 7 | 8:
-                    element = any(word in fix[i].get('alt','') for word in ['Normal']) if i == 7 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
-                    if not element:
-                        fix.insert(i, 'N/A')
-        
-        df.extend(fix)
-    
-    elif l == 9:
-        fix = org[i:i+l]
+        for e in [1,2,3,8,9]:
+            if len(fix) == 11:
+                e = 11
+                break
 
-        for i in [1,2,3,6,7]:
-            match i:
+            match e:
                 case 1:
-                    element = any(word in parse.elements_atk(i,1) for word in x.elemental_types)
+                    element = any(word in parse.elements_atk(fix[e]) for word in x.elemental_types)
                     if not element:
-                        fix.insert(i, 'N/A')
+                        fix.insert(e, 'N/A')
                 case 2 | 3:
-                    element = any(word in parse.elements_atk(i) for word in ['Physical', 'Other']) if i == 2 else any(word in parse.elements_atk(i) for word in ['Special'])
+                    if not isinstance(fix[e], NavigableString):
+                        element = any(word in parse.elements_atk(fix[e],1) for word in ['Physical', 'Other']) if e == 2 else any(word in parse.elements_atk(fix[e],1) for word in ['Special'])
+                        fix.insert(e, 'N/A') if not element and e == 2 else fix.insert(e, 'N/A') if isinstance(fix[e], NavigableString) and e == 3 else 'N/A'
+                    else:
+                        if e == 2:
+                            fix.insert(e, 'Other')
+                            fix.insert(e+1, 'N/A')
+                            fix.insert(e+2, '--')
+                        else:
+                            fix.insert(e, 'N/A')
+                case 8 | 9:
+                    element = any(word in fix[e].get('alt','') for word in ['Normal']) if e == 8 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
                     if not element:
-                            fix.insert(i, 'N/A')
-                case 6 | 7:
-                    element = any(word in fix[i].get('alt','') for word in ['Normal']) if i == 6 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
-                    if not element:
-                        fix.insert(i, 'N/A')
+                        fix.insert(e, 'N/A')
         
-        df.extend(fix)
+        df.extend([fix])
 
     i += l
 
 df = pd.DataFrame(df)
+print(df)
 
 try:
     m = Mega_Pokemon(x)
