@@ -5,6 +5,72 @@ from backend.database.src.creature import Pokemon,Mega_Pokemon
 from backend.database.src.moveset import Moveset
 from backend.database.src import parse
 
+def normal_regional():
+    k = x.p_elements.keys()
+    return True if any([i in ['Alolan','Galarian','Hisuian','Paldean'] for i in k]) else False
+
+def regional_case(numerator:int, table:list):
+    last_element = 11
+    if hasattr(table[numerator+9],'get'):
+        return last_element if numerator == 0 or isinstance(table[numerator+9].get('alt',''),str) else 10
+    else:
+        return last_element - 1
+
+def regional_z_max(numerator:int, table:list):
+    last_element = 11
+    if hasattr(table[numerator+3],'get'):
+        return last_element if numerator == 0 or isinstance(table[numerator+8].get('alt',''),str) else 10
+    else:
+        return (10 if any(
+                word in table[numerator+7].get('alt','')
+                for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(
+                    table[numerator+7], NavigableString))
+            and hasattr(table[numerator+8], 'get') else 9
+        ) if len(table) - numerator > 9 else 8
+
+def list_lenght(numerator:int, table:list, limit:str=None):
+    regional = normal_regional()
+    if not regional:
+        last_element = 8
+        l = last_element if isinstance(table[numerator+last_element],NavigableString) and table[numerator+last_element] not in ['Gen','Move Tutor','HM'] else 9
+    else:
+        match limit:
+            case 'Z Move' | 'Max Move':
+                l = regional_z_max(numerator,table)
+            case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
+                l = regional_case(numerator,table)
+
+    def interna():
+        return l
+    
+    return interna
+
+def execution_pass(to_fix:int):
+    if to_fix != 11:
+        return [2,3,8,9]
+    else:
+        return True
+
+def is_physical_attack(index):
+    return any(word in parse.elements_atk(fix[index], 1) for word in ['Physical', 'Other'])
+
+def is_special_attack(index):
+    return any(word in parse.elements_atk(fix[index], 1) for word in ['Special'])
+
+def category_fix(to_fix:list, index:int, element:bool):
+    if index == 2 and not element:
+        to_fix.insert(index,'N/A')
+    elif index == 3 and isinstance(to_fix[index], NavigableString):
+        to_fix.insert(index,'N/A')
+
+def empty_category_fix(to_fix:list,index:int):
+    if index == 2:
+        to_fix.insert(index, 'Other')
+        to_fix.insert(index+1, 'N/A')
+        to_fix.insert(index+2, '--')
+    else:
+        to_fix.insert(index, 'N/A')
+
 x = Pokemon(8,'raichu')
 x.name()
 print(x.p_name)
@@ -12,8 +78,15 @@ x.elements()
 x.weakness()
 x.stats()
 
+# Max Moves and Z Moves data scrap from Serebii.net, for pokemon with regional forms
+# Class test
+x = Pokemon(8,'raichu')
+
 all_divs = x.soup.find_all('div', attrs={'align': 'center'})
 foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
+
+x.name()
+x.elements()
 
 info = []
 for i in foo_info[17].find_all('td'):
@@ -21,7 +94,6 @@ for i in foo_info[17].find_all('td'):
 
 data = info[1:]
 org = [item for sublist in data for item in sublist]
-
 org = list(filter(lambda x: all(keyword not in str(x[1]) for keyword in ['table', '<br/>']), enumerate(org)))
 org = list(map(lambda x: x[1], org))
 
@@ -40,6 +112,7 @@ patata = [sum([1 for num in logs if num in group]) for group in ala if sum([1 fo
 
 result = []
 current_index = 0
+
 for i,num in enumerate(patata):
     if num == 1 and patata[i+1] == 3:
         patata[i+1] = 4
@@ -55,7 +128,7 @@ for i,num in enumerate(patata):
         continue
     
     lst = len(sublist)
-
+    
     if lst > 3:
         pos = sublist[2:]
     elif lst == 3:
@@ -73,49 +146,35 @@ df = []
 i = 0
 while i < len(org):
     # Let´s get the primary lenght of the table where the information of the move is located
-    if hasattr(org[i+3],'get'):
-        l = 11 if i == 0 or isinstance(org[i+8].get('alt',''),str) else 10
-    else:
-        l = (10 if any(word in org[i+7].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(org[i+7], NavigableString)) and hasattr(org[i+8], 'get') else 9) if len(org) - i > 9 else 8
-
-    if l == 11:
-        df.extend([org[i:i+l]])
+    l = list_lenght(i,org,'Max Move')
+    indexes = execution_pass(l())
         
-    elif l == 10 or l >= 8:
-        fix = org[i:i+l]
-
-        for e in [1,2,3,8,9]:
-            if len(fix) == 11:
-                e = 11
-                break
-
-            match e:
-                case 1:
-                    element = any(word in parse.elements_atk(fix[e]) for word in x.elemental_types)
-                    if not element:
-                        fix.insert(e, 'N/A')
+    if type(indexes) == list:
+        fix = org[i:i+l()]
+        for idx in indexes:
+            match idx:
                 case 2 | 3:
-                    if not isinstance(fix[e], NavigableString):
-                        element = any(word in parse.elements_atk(fix[e],1) for word in ['Physical', 'Other']) if e == 2 else any(word in parse.elements_atk(fix[e],1) for word in ['Special'])
-                        fix.insert(e, 'N/A') if not element and e == 2 else fix.insert(e, 'N/A') if isinstance(fix[e], NavigableString) and e == 3 else 'N/A'
+                    if not isinstance(fix[idx], NavigableString):
+                        element = is_physical_attack(idx) if idx == 2 else is_special_attack(idx)
+                        category_fix(fix,idx,element)
                     else:
-                        if e == 2:
-                            fix.insert(e, 'Other')
-                            fix.insert(e+1, 'N/A')
-                            fix.insert(e+2, '--')
-                        else:
-                            fix.insert(e, 'N/A')
+                        empty_category_fix(fix,idx)
                 case 8 | 9:
-                    element = any(word in fix[e].get('alt','') for word in ['Normal']) if e == 8 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
+                    element = any(word in fix[idx].get('alt','') for word in ['Normal']) if idx == 8 else any(['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
                     if not element:
-                        fix.insert(e, 'N/A')
-        
+                        fix.insert(idx, 'N/A')
+            
+            if execution_pass(len(fix)) == True:
+                break
+    
         df.extend([fix])
 
-    i += l
+    else:
+        df.extend([org[i:i+l()]])
 
-df = pd.DataFrame(df)
-print(df)
+    i += l()
+
+print(pd.DataFrame(df))
 
 try:
     m = Mega_Pokemon(x)
