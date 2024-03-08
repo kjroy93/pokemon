@@ -11,12 +11,13 @@
 from typing import Tuple, Literal, Generator
 
 # Dependencies
-from bs4 import BeautifulSoup, ResultSet
+from bs4 import Tag
 import pandas as pd
 import numpy as np
 
 # Libraries made for this proyect
-from backend.database.src.parse import number_generator, elements_atk
+from backend.database.utils.functions import number_generator, elements_atk
+from backend.database.parsers import parse_movements
 from backend.database.src.creature import Pokemon
 
 class Moveset():
@@ -58,12 +59,71 @@ class Moveset():
                 if keyword in location[0].text:
                     p_list.append(position)
                     break
+
+    def __missing_data_fix(self, table:list, counter:int=None, atk_type:str=None, form_control:str=None):
+        def table_catt(table:list, atk_type:str=None ,category:str=None):
+            if category not in [
+                'Special',
+                'Physical',
+                'Other'
+            ] and ['Max','Z'] in atk_type:
+                table.insert(3, 'N/A')
+
+            elif category not in ['Gigantamax'] and 'Max Moves' in atk_type:
+                table.insert(10, 'N/A')
+        
+        def form_max_z_move(table:list[Tag], category:int, counter:int):
+            l = parse_movements.list_lenght(counter,table,category)()
+            indexes = parse_movements.execution_pass(table)
+
+            if type(indexes) == list:
+                to_fix = parse_movements.max_z_table_segment(counter,l,table,indexes)()
+                return to_fix
+            else:
+                return table[counter:counter+l]
+        
+        def form_tm():
+            pass
+
+        def form_egg():
+            pass
+
+        def form_tutor():
+            pass
+        
+        f_x_map = {
+            'Max': table_catt,
+            'Z': table_catt
+        }
+
+        f_y_map = {
+            'TM': form_tm,
+            'Technical Machine': form_tm,
+            'TR': form_tm,
+            'Technical Record': form_tm,
+            'Egg Move': form_egg,
+            'Move Tutor': form_tutor,
+            'Max Move': form_max_z_move,
+            'Z Move': form_max_z_move
+        }
+
+        if isinstance(table, list) and not form_control:
+            for key, function in f_x_map.items():
+                function(table,atk_type,category=table[counter+3].text)
+                if key == 'Max':
+                    function(table,atk_type,category=table[counter+10].text)
+        
+        elif isinstance(table, list) and form_control:
+            pass
+
+        else:
+            raise ValueError("Table is not a list. Please, check input.")
     
-    def __move_set(self, org:list=None, value:int=None, lenght:int=None, list_name:str=None, atk_type:str=None, form_control:str=None):
+    def __move_set(self, table:list=None, value:int=None, lenght:int=None, list_name:str=None, atk_type:str=None, form_control:str=None):
         self.__missing_data_fix()
 
         to_populate = getattr(self,list_name)
-        to_populate.extend([org[value:value+lenght]])
+        to_populate.extend([table[value:value+lenght]])
 
         for i in to_populate:
             if atk_type == "Egg Move":
@@ -83,53 +143,11 @@ class Moveset():
                 i[2] = elements_atk(i[2])
                 i[3] = elements_atk(i[3],1)
 
-    def __missing_data_fix(self, table:list, counter:int=None, atk_type:str=None, form_control:str=None):
-        def table_catt(table:list, atk_type:str=None ,category:str=None):
-            if category not in [
-                'Special',
-                'Physical',
-                'Other'
-            ] and ['Max','Z'] in atk_type:
-                table.insert(3, 'N/A')
-
-            elif category not in ['Gigantamax'] and 'Max Moves' in atk_type:
-                table.insert(10, 'N/A')
-                
-
-        
-        f_x_map = {
-            'Max': table_catt,
-            'Z': table_catt
-        }
-
-        f_y_map = {
-            'TM': form_table_catt,
-            'Technical Machine': form_table_catt,
-            'TR': form_table_catt,
-            'Technical Record': form_table_catt,
-            'Egg Move': form_table_catt,
-            'Move Tutor': form_table_catt,
-            'Max Move': form_table_catt,
-            'Z Move': form_table_catt
-        }
-
-        if isinstance(table, list) and not form_control:
-            for key, function in f_x_map.items():
-                function(table,atk_type,category=table[counter+3].text)
-                if key == 'Max':
-                    function(table,atk_type,category=table[counter+10].text)
-        
-        elif isinstance(table, list) and form_control:
-            pass
-
-        else:
-            raise ValueError("Table is not a list. Please, check input.")
-
-    def __max_z_move(self, table_type:str=None, org:list=None, value:int=None, lenght:int=None, list_name:str=None, form_control:str=None):
-        self.__missing_data_fix(org,counter=value,atk_type=table_type)
+    def __max_z_move(self, table_type:str=None, table:list=None, value:int=None, lenght:int=None, list_name:str=None, form_control:str=None):
+        self.__missing_data_fix(table,counter=value,atk_type=table_type, form_control=form_control)
 
         to_populate = getattr(self,list_name)
-        to_populate.extend([org[value:value+lenght]])
+        to_populate.extend([table[value:value+lenght]])
     
     def __list_composition(self, table:list):
         info = []
@@ -170,22 +188,3 @@ class Moveset():
             if key in form_knowledge:
                 form_control = key
             break
-
-        data = info[1:]
-        org = [item for sublist in data for item in sublist]
-        e = table_lenght(table_type,form_control)
-
-        list_of_list = 0
-        for i in range(0,len(org),e):
-            for _, str_int in self._map.items():
-                atk_str = (str_int[0])
-                if 'Max' in table_type or 'Z' in table_type:
-                    self.__max_z_move(table_type,org,value=i,lenght=e,list_name=atk_str)
-                    break
-                else:
-                    self.__move_set(org,value=i,lenght=e,list_name=atk_str,atk_type=table_type)
-                    break
-
-            list_of_list += 1
-        
-        to_treat = getattr(self,)

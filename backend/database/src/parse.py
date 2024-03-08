@@ -1,14 +1,9 @@
 # Special Functions in order for main class to be more readable
 import re
 from typing import Literal
-from bs4 import BeautifulSoup, Tag, ResultSet, NavigableString
+from bs4 import Tag, ResultSet, NavigableString
 
-import pandas as pd
-from pandas import DataFrame
-
-def number_generator(init:int):
-    for number in range(init,1000):
-        yield number
+from backend.database.utils import functions
 
 def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, search:Literal['form','moveset']=None) -> ResultSet:
     """
@@ -57,13 +52,6 @@ def find_word(tag):
 def find_atribute(location):
     return location.br.next_sibling.text.split('\r\n\t\t\t').pop(1)
 
-def remove_string(data:list):
-    s = 'Attacking Move Type: ','-type'
-    for string in s:
-        data = list(map(lambda x: x.replace(string,''),data))
-
-    return data
-
 def filter_types(locations:list):
     elements = [tag.text for tag in locations if '*' in tag.get_text(strip=True)]
     v_int = list(map(lambda x: x.replace('*',''),elements))
@@ -81,9 +69,6 @@ def get_filters(location:list, control:int=0):
         regional_val = filter_types(location[36:54])
         
         return normal_val,regional_val
-    
-def make_dict(elemental:list, v:list):
-    return dict(zip(elemental,v))
 
 def n_columns(number:int, moves:Literal['lv']=None):
     match number:
@@ -116,48 +101,6 @@ def n_columns(number:int, moves:Literal['lv']=None):
 
             return c_names
 
-def elements_atk(a_tag:Tag, control:int=None):
-    elemental_types = [
-    'Normal',
-    'Fire',
-    'Water',
-    'Electric',
-    'Grass',
-    'Ice',
-    'Fighting',
-    'Poison',
-    'Ground',
-    'Flying',
-    'Psychic',
-    'Bug',
-    'Rock',
-    'Ghost',
-    'Dragon',
-    'Dark',
-    'Steel',
-    'Fairy'
-    ]
-
-    category = [
-        'physical',
-        'special',
-        'other'
-    ]
-
-    minus = [elemental_type.lower() for elemental_type in elemental_types]
-
-    if control == None:
-        text = minus
-    elif control == 1:
-        text = category
-    else:
-        raise ValueError('The Control variable must be 1 if you want to process atk types')
-
-    for n,i in enumerate(text):
-        type_text = a_tag['src']
-        if i in type_text:
-            return str(text[n].capitalize())
-
 def columns_data_type(quantity_of_columns,reshape,egg_moves,moves):
     if quantity_of_columns == 9:
         for i in reshape:
@@ -165,8 +108,8 @@ def columns_data_type(quantity_of_columns,reshape,egg_moves,moves):
                 i[0] = i[0].text
             
             i[1] = i[1].text
-            i[2] = elements_atk(i[2])
-            i[3] = elements_atk(i[3],1)
+            i[2] = functions.elements_atk(i[2])
+            i[3] = functions.elements_atk(i[3],1)
 
     elif quantity_of_columns == 8:
         for i in reshape:
@@ -174,28 +117,8 @@ def columns_data_type(quantity_of_columns,reshape,egg_moves,moves):
                 del i[7]
 
             i[0] = i[0].text
-            i[1] = elements_atk(i[1])
-            i[2] = elements_atk(i[2],1)
-        
-def list_of_elements(location:Tag):
-    types = []
-    location = location[0:18]
-
-    for tag in location:
-        a_tag = tag.find('img')
-        if a_tag and not isinstance(a_tag,Tag):
-            continue
-
-        try:
-            type_text = a_tag['alt']
-            types.append(type_text)
-        except KeyError:
-            type_text = elements_atk(a_tag)
-            types.append(type_text)
-    
-    types = remove_string(types)
-    
-    return types
+            i[1] = functions.elements_atk(i[1])
+            i[2] = functions.elements_atk(i[2],1)
 
 def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None, pokemon:str=None):
     forms = ['Alolan','Galarian','Hisuian','Paldean']
@@ -231,8 +154,8 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                             type_text = e['alt']
                             regional_form.append(type_text)
                 
-                base_form = remove_string(base_form)
-                regional_form = remove_string(regional_form)
+                base_form = functions.remove_string(base_form)
+                regional_form = functions.remove_string(regional_form)
 
                 dictionary['Normal'] = base_form
                 dictionary[regional] = regional_form
@@ -248,7 +171,7 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                         continue
                     
                     if pokemon:
-                        type_text = elements_atk(a_tag)
+                        type_text = functions.elements_atk(a_tag)
                         types.append(type_text)
 
                     else:
@@ -256,10 +179,10 @@ def elemental_types(location:Tag, form:Literal['mega']=None, elements:list=None,
                             type_text = a_tag['alt']
                             types.append(type_text)
                         except KeyError:
-                            type_text = elements_atk(a_tag)
+                            type_text = functions.elements_atk(a_tag)
                             types.append(type_text)
 
-                types = remove_string(types)
+                types = functions.remove_string(types)
 
             return types
         
@@ -399,90 +322,6 @@ def process_multiple_bases(texts:list, bases:list):
                 stats[t] = bases[18:24]
     
     return stats
-
-def form_tm_fix(table:list):
-    df = []
-    table = list(filter(lambda x: 'table' not in str(x[1]), enumerate(table)))
-    table = list(map(lambda x: x[1], table))
-
-    i = 0
-    while i < len(table):
-        if hasattr(table[i+9],'get'):
-            l = 11 if i == 0 or isinstance(table[i+9].get('alt',''),str) else 10
-        else:
-            l = 10
-
-        if l == 10 and any(word in table[i+8].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal']):
-            fix = table[i:i+l]
-            fix.insert(8 if 'Form' in table[i+8].get('alt','') else 9, 'N/A')
-            df.extend([fix])
-        else:
-            df.extend([table[i:i+l]])
-        i += l
-    
-    return df
-
-def form_egg_fix(table:list, pokemon_name:str):
-    reference = []
-    i = 7
-    while i < len(table):
-        html = str(table[i])
-        soup = BeautifulSoup(html, 'html.parse')
-
-        img_tag = soup.find_all('img')
-        if img_tag:
-            values = [img.get('alt') for img in img_tag]
-            del table[i]
-
-            for pos,value in enumerate(values):
-                if pos < 1:
-                    table.insert(i,value)
-                else:
-                    table.insert(i+1,value)
-
-            i += 10
-
-        elif table[i].text == 'Details':
-            del table[i]
-
-            if not reference:
-                reference.append(i-7)
-            
-            i += 8
-
-        elif table[i+1].text == '':
-            if pokemon_name == 'Raichu' and table[i].text == 'Volt Tackle':
-                del table[i+7]
-
-                exclusive_move_case = table[i:]
-                reference.append(i)
-
-                i += 9
-
-                continue
-            
-            if len(reference) == 1:
-                reference.append(i)
-
-            del table[i+1]
-            del table[i+8]
-
-            i += 9
-        
-        else:
-            i -= 7
-    
-    form_egg_moves = table[0:reference[0]]
-    eightgen_egg_moves = table[reference[0]:reference[1]]
-    bdsp_egg_moves = table[reference[1]:reference[2]]
-    exclusive_move_case = [exclusive_move_case]
-
-    if exclusive_move_case:
-        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves,exclusive_move_case
-    else:
-        return form_egg_moves,eightgen_egg_moves,bdsp_egg_moves
-
-def form_max_z_move_fix(table:list, pokemon_elements:list):
     def internal_function(fix: list):
         for i in [1,2,3,8,9]:
             if len(fix) == 11:
@@ -491,12 +330,12 @@ def form_max_z_move_fix(table:list, pokemon_elements:list):
 
             match i:
                 case 1:
-                    element = any(word in elements_atk(fix[i]) for word in pokemon_elements)
+                    element = any(word in functions.elements_atk(fix[i]) for word in pokemon_elements)
                     if not element:
                         fix.insert(i, 'N/A')
                 case 2 | 3:
                     if not isinstance(fix[i], NavigableString):
-                        element = any(word in elements_atk(fix[i],1) for word in ['Physical', 'Other']) if i == 2 else any(word in elements_atk(fix[i],1) for word in ['Special'])
+                        element = any(word in functions.elements_atk(fix[i],1) for word in ['Physical', 'Other']) if i == 2 else any(word in functions.elements_atk(fix[i],1) for word in ['Special'])
                         fix.insert(i, 'N/A') if not element and i == 2 else fix.insert(i, 'N/A') if isinstance(fix[i], NavigableString) and i == 3 else 'N/A'
                     else:
                         if i == 2:
