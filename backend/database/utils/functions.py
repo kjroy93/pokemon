@@ -21,9 +21,9 @@ def make_dict(elemental:list, v:list):
 
 def elements_atk(a_tag:Tag, control:int=None):
     elemental_types = [
-    'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice',
-    'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug',
-    'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy'
+        'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice',
+        'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug',
+        'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy'
     ]
 
     category = [

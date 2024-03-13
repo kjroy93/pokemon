@@ -1,7 +1,7 @@
 # Standard libraries of Python
 
 # Dependencies
-from bs4 import NavigableString, Tag
+from bs4 import NavigableString, Tag, BeautifulSoup
 
 # Libraries
 from backend.database.utils.functions import elements_atk
@@ -25,12 +25,13 @@ def regional_z_max(numerator:int, table:list[Tag]):
         return (10 if any(
                 word in table[numerator+7].get('alt','')
                 for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(
-                    table[numerator+7], NavigableString))
-            and hasattr(table[numerator+8], 'get') else 9
+                    table[numerator+7], NavigableString
+                )
+            ) and hasattr(table[numerator+8], 'get') else 9
         ) if len(table) - numerator > 9 else 8
 
-def list_lenght(numerator:int, table:list, limit:str=None):
-    regional = normal_regional()
+def list_lenght(numerator:int, table:list, limit:str=None, pokemon_ability:dict=None):
+    regional = normal_regional(pokemon_ability)
     if not regional:
         last_element = 8
         l = last_element if isinstance(table[numerator+last_element],NavigableString) and table[numerator+last_element] not in ['Gen','Move Tutor','HM'] else 9
@@ -45,6 +46,17 @@ def list_lenght(numerator:int, table:list, limit:str=None):
         return l
     
     return interna
+
+def list_composition(table:BeautifulSoup) -> list[Tag | NavigableString]:
+    info = []
+    for pos in table.find_all('td'):
+        info.append(pos)
+    
+    content = [item for sublist in info[1:] for item in sublist]
+    content = list(filter(lambda x: all(keyword not in str(x[1]) for keyword in ['table', '<br/>']), enumerate(content)))
+    table = list(map(lambda x: x[1], content))
+
+    return table
 
 def execution_pass(to_fix:int):
     if to_fix != 11:
@@ -104,15 +116,15 @@ def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
     
     return internal
                             
-def process_table_recursive(i:int, table:list, limit:str):
+def process_table_recursive(i:int, table:list, limit:str, pokemon_ability:dict=None):
     if i >= len(table):
         return []
     
-    l = list_lenght(i, table, limit)()
+    l = list_lenght(i, table, limit, pokemon_ability)()
     indexes = execution_pass(l)
 
-    if type(indexes) == list:
-        to_fix = max_z_table_segment(i,l,table,indexes)
-        return [to_fix] + process_table_recursive(i+l,table,limit)
+    if type(indexes) != bool:
+        to_fix = max_z_table_segment(i,l,table,indexes)()
+        return [to_fix] + process_table_recursive(i+l,table,limit,pokemon_ability)
     else:
-        return [table[i:i+l]] + process_table_recursive(i+l,table,limit)
+        return [table[i:i+l]] + process_table_recursive(i+l,table,limit,pokemon_ability)

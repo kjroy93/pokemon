@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup,ResultSet,Tag
 
 # Libraries made for this proyect
 from backend.database.src import parse
+from backend.database.utils import functions
 from backend.database.special_cases import rotom, heroes, urshifu, darmanitan, tauros, necrozma, hoopa, calyrex, ogerpon
 
 URL = "https://www.serebii.net/index2.shtml"
@@ -74,7 +75,7 @@ class Pokemon():
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
         location = self._basic_tables('footype')
-        self.elemental_types = parse.list_of_elements(location)
+        self.elemental_types = functions.list_of_elements(location)
         self._bases = []
 
     def _basic_tables(self, type_of_table:Literal['fooinfo','footype','bases','elements','moveset']) -> ResultSet:
