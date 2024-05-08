@@ -73,7 +73,7 @@ class Moveset():
                 table.insert(10, 'N/A')
         
         def form_max_z_move(table:list[Tag], category:int, counter:int):
-            l = parse_movements.list_lenght(counter,table,category)()
+            l = parse_movements.list_lenght(counter,table,limit=category,pokemon_ability=self.pokemon.p_abilities)()
             indexes = parse_movements.execution_pass(table)
 
             if type(indexes) == list:

@@ -63,3 +63,15 @@ def list_of_elements(location:Tag):
     types = remove_string(types)
     
     return types
+
+def is_physical_attack(table:list[Tag], index:int):
+    return any(word in elements_atk(table[index], 1) for word in ['Physical', 'Other'])
+
+def is_special_attack(table:list[Tag], index:int):
+    return any(word in elements_atk(table[index], 1) for word in ['Special'])
+
+def is_normal_form(table:list[Tag], index:int):
+    return any(word in table[index].get('alt','') for word in ['Normal'])
+
+def is_regional_form(table:list[Tag], index:int):
+    return any(word in table[index].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean'])

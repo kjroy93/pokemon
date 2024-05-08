@@ -306,7 +306,7 @@ class Pokemon():
                 effectiviness.append(float(i))
         
         if pokemon:
-            dictionary = parse.make_dict(elemental_types,effectiviness)
+            dictionary = functions.make_dict(elemental_types,effectiviness)
 
             return dictionary
         
