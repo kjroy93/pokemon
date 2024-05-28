@@ -1,15 +1,14 @@
 # Standard libraries of Python
+from typing import List
 
 # Dependencies
 from bs4 import Tag
-
-# Libraries
 
 def number_generator(init:int):
     for number in range(init,1000):
         yield number
     
-def remove_string(data:list):
+def remove_string(data:List[str]):
     s = 'Attacking Move Type: ','-type'
     for string in s:
         data = list(map(lambda x: x.replace(string,''),data))
@@ -49,7 +48,7 @@ def list_of_elements(location:Tag):
     location = location[0:18]
 
     for tag in location:
-        a_tag = tag.find('img')
+        a_tag = Tag[tag].find('img')
         if a_tag and not isinstance(a_tag,Tag):
             continue
 
@@ -64,14 +63,14 @@ def list_of_elements(location:Tag):
     
     return types
 
-def is_physical_attack(table:list[Tag], index:int):
+def is_physical_attack(table:List[Tag], index:int):
     return any(word in elements_atk(table[index], 1) for word in ['Physical', 'Other'])
 
-def is_special_attack(table:list[Tag], index:int):
+def is_special_attack(table:List[Tag], index:int):
     return any(word in elements_atk(table[index], 1) for word in ['Special'])
 
-def is_normal_form(table:list[Tag], index:int):
+def is_normal_form(table:List[Tag], index:int):
     return any(word in table[index].get('alt','') for word in ['Normal'])
 
-def is_regional_form(table:list[Tag], index:int):
+def is_regional_form(table:List[Tag], index:int):
     return any(word in table[index].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean'])

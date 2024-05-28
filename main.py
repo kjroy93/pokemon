@@ -12,33 +12,95 @@ x.elements()
 x.weakness()
 x.stats()
 
-# Max Moves and Z Moves data scrap from Serebii.net, for pokemon with regional forms
+# Egg moves in case of regional form pokémon, for the 8th generation and 7th generation, including BDSP data
 # Class test
 x = Pokemon(8,'raichu')
 
 all_divs = x.soup.find_all('div', attrs={'align': 'center'})
 foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
 
-scrap = parse_movements.list_composition(foo_info[17])
-positions, group = parse_movements.obtain_positions(scrap)
+x.name()
 
-result = []
-index = 0
-for num in group:
-    line = positions[index:index+num]
-    last_element = line[-1]
-    length = len(line)
+scrap = parse_movements.list_composition(table=foo_info[15],category='Egg Move')
+reference = []
+i = 7
+while i < len(scrap):
+    html = str(scrap[i])
+    soup = BeautifulSoup(html, 'html.parser')
 
-    line = line + [last_element + 1] if len(line) > 1 else line
-    pos = line[2:] if length > 3 else line[1:] if length == 3 else []
+    img_tag = soup.find_all('img')
+    if img_tag:
+        values = [img.get('alt') for img in img_tag]
+        del scrap[i]
+
+        for pos,value in enumerate(values):
+            if pos < 1:
+                scrap.insert(i,value)
+            else:
+                scrap.insert(i+1,value)
+
+        i += 10
+
+    elif scrap[i].text == 'Details':
+        del scrap[i]
+
+        if not reference:
+            reference.append(i-7)
+        
+        i += 8
+
+    elif scrap[i+1].text == 'BDSP Only':
+        if x.p_name == 'Raichu' and scrap[i].text == 'Volt Tackle':
+            del scrap[i+7]
+
+            exclusive_move_case = scrap[i:]
+            reference.append(i)
+
+            i += 9
+
+            continue
+        
+        if len(reference) == 1:
+            reference.append(i)
+
+        del scrap[i+1]
+        del scrap[i+7]
+
+        i += 8
     
-    result.extend(pos)
-    index += num
+    elif isinstance(scrap[i+1],Tag):
+            if x.p_name == 'Raichu' and scrap[i].text == 'Volt Tackle':
+                del scrap[i+7]
 
-main_table = parse_movements.eliminate_excess(result,scrap)
-df = parse_movements.process_table_recursive(0,main_table,'Max Move',x.p_elements)
+                exclusive_move_case = scrap[i:]
+                reference.append(i)
 
-print(pd.DataFrame(df))
+                i += 9
+
+                continue
+
+            else:
+                i -= 7
+                continue
+    
+    else:
+        i -= 7
+
+form_egg_moves = scrap[0:reference[0]]
+eightgen_egg_moves = scrap[reference[0]:reference[1]]
+bdsp_egg_moves = scrap[reference[1]:reference[2]]
+
+form_egg_moves = pd.DataFrame([scrap[i:i+10] for i in range(0,reference[0],10)])
+eightgen_egg_moves = pd.DataFrame([scrap[i:i+8] for i in range(reference[0],reference[1],8)])
+bdsp_egg_moves = pd.DataFrame([scrap[i:i+7] for i in range(reference[1],reference[2],7)])
+
+if exclusive_move_case:
+    exclusive_move_case = pd.DataFrame([exclusive_move_case])
+    eightgen_egg_moves = pd.concat([eightgen_egg_moves,exclusive_move_case], ignore_index=True)
+bdsp_egg_moves[9] = bdsp_egg_moves[1]
+bdsp_egg_moves = bdsp_egg_moves.drop(columns=1)
+bdsp_egg_moves.columns = range(len(bdsp_egg_moves.columns))
+eightgen_egg_moves = pd.concat([eightgen_egg_moves,bdsp_egg_moves], axis=0, ignore_index=True)
 
 try:
     m = Mega_Pokemon(x)

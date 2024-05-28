@@ -4,7 +4,7 @@ from typing import Tuple, Literal
 # Dependencies
 import requests
 import re
-from bs4 import BeautifulSoup,ResultSet,Tag
+from bs4 import BeautifulSoup, ResultSet, Tag
 
 # Libraries made for this proyect
 from backend.database.src import parse
@@ -18,7 +18,7 @@ assert requests.get(URL).status_code == 200, 'There is a problem with Serebii we
 def gen_url(gen: int):
     """
     It defines an aspect of the URL of the webpage.
-    The gen attribute goes from 1 to 8. It is mandatory, in order for the program to work. You use it in the beginning of Pokémon class."
+    The gen attribute goes from 1 to 9. It is mandatory, in order for the program to work. You use it in the beginning of Pokémon class."
     """
     gens = {
         1: 'pokedex',
