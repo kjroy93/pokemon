@@ -168,7 +168,8 @@ class Pokemon():
         """
 
         It determines the elemental types of the Pokémon. This is basic in order to know weakness and STAB (explained later in Damage Calculation).
-
+        
+        Attributes:
         - p_elements: Elemental Types of Pokemon.
         - rotoms_elements: Contain the elemental types of all forms of Rotom
         - heroes: Contain the elemental types of Zacian & Zamazenta

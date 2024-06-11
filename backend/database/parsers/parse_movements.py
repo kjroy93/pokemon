@@ -1,11 +1,13 @@
 # Standard libraries of Python
+import functools
 from typing import Literal, List
 
 # Dependencies
-from bs4 import NavigableString, Tag, BeautifulSoup
+from bs4 import NavigableString, Tag, BeautifulSoup, ResultSet
 
 # Libraries
 from backend.database.utils import functions
+from backend.database.utils.functions import remove_string_line
 
 def list_composition(table:BeautifulSoup=None, category:str=None) -> list[Tag | NavigableString]:
     """
@@ -27,7 +29,7 @@ def list_composition(table:BeautifulSoup=None, category:str=None) -> list[Tag | 
         - An integer representing the index of the last relevant line in the table.
     """
 
-    def egg_move_last_line(scrap:List[Tag]=scrap):
+    def egg_move_last_line(scrap:List[Tag]=None):
         """
         Determine the last relevant line in the table based on the presence of an 'img' tag.
 
@@ -49,7 +51,7 @@ def list_composition(table:BeautifulSoup=None, category:str=None) -> list[Tag | 
     scrap = [item for sublist in init_of_data for item in sublist]
     
     if category == 'Egg Move':
-        last_line = egg_move_last_line()
+        last_line = egg_move_last_line(scrap)
         content_before = scrap[:last_line]
         content_after = scrap[last_line:]
         filtered_content_after = list(filter(
@@ -112,39 +114,29 @@ def obtain_positions(scrap:list):
 
     return locations, group_by
 
-def execution_pass(to_fix:int, category:Literal['Max Move', 'Z Move']):
-    match category:
-        case 'Max Move':
-            if to_fix != 11:
-                return [2,3,8,9]
-            else:
-                return True
-            
+def define_table(group, positions, scrap:list[Tag]):
+    result = []
+    index = 0
+    for num in group:
+        line = positions[index:index + num]
+        last_element = line[-1]
 
+        sublist = line + [last_element + 1] if len(line) > 1 else line
+        final_positions = sublist[2:] if len(sublist) > 3 else sublist[1:] if len(sublist) == 3 else []
+        
+        result.extend(final_positions)
+        index += num
+
+    main_table = eliminate_excess(result,scrap)
+
+    return main_table
+            
 def normal_regional(pokemon_ability:dict | list):
     if isinstance(pokemon_ability,dict):
         k = pokemon_ability.keys()
         return True if any([i in ['Alolan','Galarian','Hisuian','Paldean'] for i in k]) else False
     elif isinstance(pokemon_ability,list):
         return False
-
-def empty_category_fix(to_fix:list, index:int):
-    if index == 2:
-        to_fix.insert(index, 'Other')
-        to_fix.insert(index+1, 'N/A')
-        to_fix.insert(index+2, '--')
-    else:
-        to_fix.insert(index, 'N/A')
-
-def category_fix(to_fix:list, index:int, element:bool):
-    if index == 2 and not element:
-        to_fix.insert(index,'N/A')
-    elif index == 3 and isinstance(to_fix[index], NavigableString):
-        to_fix.insert(index,'N/A')
-    elif index == 8 or index == 9:
-        to_fix.insert(index,'N/A')
-    else:
-        pass
 
 def eliminate_excess(positions:list[int], scrap:list[Tag|NavigableString]):
     return [element for idx, element in enumerate(scrap) if idx not in positions]
@@ -169,26 +161,7 @@ def regional_z_max(numerator:int, table:list[Tag]):
             ) and hasattr(table[numerator+8], 'get') else 9
         ) if len(table) - numerator > 9 else 8
 
-def list_lenght(numerator:int, table:list, limit:str=None, regional_form:bool=None):
-    if not regional_form:
-        last_element = 9
-        l = last_element if limit != 'Max Move' else 11
-    
-    else:
-        match limit:
-            case 'Egg Move':
-                l = 8
-            case 'Z Move' | 'Max Move':
-                l = regional_z_max(numerator,table)
-            case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
-                l = regional_case(numerator,table)
-
-    def internal():
-        return l
-    
-    return internal
-
-def egg_move_fix(start_index:int, length:int, table:List[Tag]) -> List[Tag]:
+def egg_move_fix(start_index:int, length:int, table:List[Tag]) -> list[Tag | NavigableString]:
     """
     Fixes specific issues in the egg move section of the table.
 
@@ -210,46 +183,35 @@ def egg_move_fix(start_index:int, length:int, table:List[Tag]) -> List[Tag]:
         """
         
         # Fix the error in Serebii.net html, when it closes the tag of corresponding to regional form img with <img\> in the first element
-        html = table[data_location]
+        html = to_fix[data_location]
         soup = BeautifulSoup(str(html), 'html.parser')
 
         img_tag = soup.find_all('img')
         if img_tag:
-            to_fix[7] = img_tag[0] # Change the original img table with only the corresponding pokemon form (Alolan, Galarian, Hisuian or Paldea)
-            to_fix.insert(8, img_tag)
+            values = [img.get('alt') for img in img_tag]
+            to_fix[7] = values[0] # Change the original img table with the normal form Pokémon
+            to_fix.insert(8, values[1]) # Add the regional form Pokémon
     
-    def general_process(to_fix:List[Tag]):
+    @remove_string_line('Details')
+    def general_process(to_fix:List[Tag], string:str):
         """
         General processing to remove 'Details' entry if present.
         
         Parameters:
         - to_fix: The list of Tag objects to be fixed.
+        - string: A string parameter (additional functionality can be added here).
         """
-        if table[data_location].text == 'Details':
-            del to_fix[data_location]
-    
-    def bdsp_only(to_fix:List[Tag]):
-        """
-        Remove 'BDSP Only' entry if present.
-        
-        Parameters:
-        - to_fix: The list of Tag objects to be fixed.
-        """
-        if table[start_index + 1].text == 'BDSP Only':
-            del to_fix[start_index + 1]
-            del to_fix[start_index + 7]
+
+        print(f'Processing string: {string}')
 
     to_fix = table[start_index:start_index + length]
 
-    # The seventh element is always the table with regional forms, or with the 'Details' URL with possible parents to inherith egg move
-    data_location = start_index + 7
+    # The seventh and eighth element is always the table with regional forms, or with the 'Details' URL with possible parents to inherith egg move
+    data_location = 7 if length == 8 else 8
 
+    # Process the table where the normal and regional form are located in the html Serebii.net
     regional_img_process(to_fix)
-    general_process(to_fix)
-    bdsp_only(to_fix)
-
-    return to_fix
-
+    general_process(to_fix,'Details')
 
 def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
     to_fix = table[start_index:start_index+length]
@@ -273,22 +235,51 @@ def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
     
     return internal
 
-def define_table(group, positions, scrap:list[Tag]):
-    result = []
-    index = 0
-    for num in group:
-        line = positions[index:index + num]
-        last_element = line[-1]
+def empty_category_fix(to_fix:list, index:int):
+    if index == 2:
+        to_fix.insert(index, 'Other')
+        to_fix.insert(index+1, 'N/A')
+        to_fix.insert(index+2, '--')
+    else:
+        to_fix.insert(index, 'N/A')
 
-        sublist = line + [last_element + 1] if len(line) > 1 else line
-        final_positions = sublist[2:] if len(sublist) > 3 else sublist[1:] if len(sublist) == 3 else []
-        
-        result.extend(final_positions)
-        index += num
+def category_fix(to_fix:list, index:int, element:bool):
+    if index == 2 and not element:
+        to_fix.insert(index,'N/A')
+    elif index == 3 and isinstance(to_fix[index], NavigableString):
+        to_fix.insert(index,'N/A')
+    elif index == 8 or index == 9:
+        to_fix.insert(index,'N/A')
+    else:
+        pass
 
-    main_table = eliminate_excess(result,scrap)
+def execution_pass(to_fix:int, category:Literal['Max Move', 'Z Move']):
+    match category:
+        case 'Max Move':
+            if to_fix != 11:
+                return [2,3,8,9]
+            else:
+                return True
 
-    return main_table
+def list_lenght(numerator:int, table:list[Tag], limit:str=None, regional_form:bool=None):
+    if not regional_form:
+        last_element = 9
+        l = last_element if limit != 'Max Move' else 11
+    
+    else:
+        match limit:
+            case 'Egg Move':
+                data_location = 1
+                l = 8 if table[data_location].text != 'BDSP Only' else 9
+            case 'Z Move' | 'Max Move':
+                l = regional_z_max(numerator,table)
+            case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
+                l = regional_case(numerator,table)
+
+    def internal():
+        return l
+    
+    return internal
 
 def process_table_recursive(i:int, table:list, limit:str, regional_form:bool=None, category:Literal['Max Move','Egg Move']=None):
     if i >= len(table):
@@ -296,11 +287,9 @@ def process_table_recursive(i:int, table:list, limit:str, regional_form:bool=Non
     
     l = list_lenght(i, table, limit, regional_form)()
 
-    if category == 'Max Move':
-        indexes = execution_pass(l,'Max Move')
-
     match category:
         case 'Max Move':
+            indexes = execution_pass(l,category)
             if type(indexes) != bool:
                 to_fix = max_z_table_segment(i,l,table,indexes)()
                 return [to_fix] + process_table_recursive(i+l,table,limit,regional_form,category)
@@ -308,5 +297,6 @@ def process_table_recursive(i:int, table:list, limit:str, regional_form:bool=Non
                 return [table[i:i+l]] + process_table_recursive(i+l,table,limit,regional_form,category)
         
         case 'Egg Move':
-            to_fix = egg_move_fix(i,l,table)
-            return [to_fix] + process_table_recursive(i+l,table,limit,regional_form,category)
+            line = egg_move_fix(i,l,table)
+            l += 1
+            return [line] + process_table_recursive(i+l,table,limit,regional_form,category)
