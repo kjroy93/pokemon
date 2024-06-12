@@ -1,5 +1,4 @@
 # Standard libraries of Python
-import functools
 from typing import Literal, List
 
 # Dependencies
@@ -29,7 +28,7 @@ def list_composition(table:BeautifulSoup=None, category:str=None) -> list[Tag | 
         - An integer representing the index of the last relevant line in the table.
     """
 
-    def egg_move_last_line(scrap:List[Tag]=None):
+    def egg_move_last_line(scrap:List[Tag | NavigableString]=None):
         """
         Determine the last relevant line in the table based on the presence of an 'img' tag.
 
@@ -192,8 +191,8 @@ def egg_move_fix(start_index:int, length:int, table:List[Tag]) -> list[Tag | Nav
             to_fix[7] = values[0] # Change the original img table with the normal form Pokémon
             to_fix.insert(8, values[1]) # Add the regional form Pokémon
     
-    @remove_string_line('Details')
-    def general_process(to_fix:List[Tag], string:str):
+    @remove_string_line()
+    def general_process(string:str=None):
         """
         General processing to remove 'Details' entry if present.
         
@@ -207,11 +206,13 @@ def egg_move_fix(start_index:int, length:int, table:List[Tag]) -> list[Tag | Nav
     to_fix = table[start_index:start_index + length]
 
     # The seventh and eighth element is always the table with regional forms, or with the 'Details' URL with possible parents to inherith egg move
-    data_location = 7 if length == 8 else 8
+    data_location = 7 if length == 9 else 8
 
     # Process the table where the normal and regional form are located in the html Serebii.net
     regional_img_process(to_fix)
-    general_process(to_fix,'Details')
+    general_process(to_fix,string='Details',data_location=data_location)
+
+    return to_fix
 
 def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
     to_fix = table[start_index:start_index+length]
@@ -270,7 +271,7 @@ def list_lenght(numerator:int, table:list[Tag], limit:str=None, regional_form:bo
         match limit:
             case 'Egg Move':
                 data_location = 1
-                l = 8 if table[data_location].text != 'BDSP Only' else 9
+                l = 9 if table[numerator+data_location].text != 'BDSP Only' else 10
             case 'Z Move' | 'Max Move':
                 l = regional_z_max(numerator,table)
             case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':

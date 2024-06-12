@@ -98,14 +98,14 @@ def remove_string_line(string:str=None):
     """
     def decorator(func:Callable):
         @wraps(func)
-        def wrapper(to_fix:List[Tag], data_location:int, *args, **kwargs) -> list[Tag | NavigableString]:
+        def wrapper(to_fix:List[Tag], string:str, data_location:int, *args, **kwargs) -> list[Tag | NavigableString]:
             print(f'Processing line\n {to_fix} in order to ger rid of the string: {string}')
 
             try:
                 if to_fix[data_location].text == string:
                     del to_fix[data_location]
             except AttributeError as e:
-                print[f'Error: {e}']
+                print(f'Error: {e}')
                 pass
             
             return func(to_fix, *args, **kwargs)

@@ -22,7 +22,7 @@ x.name()
 
 scrap = parse_movements.list_composition(table=foo_info[15],category='Egg Move')
 regional = parse_movements.normal_regional(x.p_elements)
-table = parse_movements.process_table_recursive(0,scrap,'Egg Move',regional_form=regional,category='Egg Move')
+table = parse_movements.process_table_recursive(0,scrap,'Egg Move',regional_form=regional)
 
 print(table)
 
