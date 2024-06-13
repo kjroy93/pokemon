@@ -18,30 +18,11 @@ x.stats()
 all_divs = x.soup.find_all('div', attrs={'align': 'center'})
 foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
 
-x.name()
-
 scrap = parse_movements.list_composition(table=foo_info[15],category='Egg Move')
 regional = parse_movements.normal_regional(x.p_elements)
 table = parse_movements.process_table_recursive(0,scrap,'Egg Move',regional_form=regional)
 
 print(table)
-
-
-# form_egg_moves = scrap[0:reference[0]]
-# eightgen_egg_moves = scrap[reference[0]:reference[1]]
-# bdsp_egg_moves = scrap[reference[1]:reference[2]]
-
-# form_egg_moves = pd.DataFrame([scrap[i:i+10] for i in range(0,reference[0],10)])
-# eightgen_egg_moves = pd.DataFrame([scrap[i:i+8] for i in range(reference[0],reference[1],8)])
-# bdsp_egg_moves = pd.DataFrame([scrap[i:i+7] for i in range(reference[1],reference[2],7)])
-
-# if exclusive_move_case:
-#     exclusive_move_case = pd.DataFrame([exclusive_move_case])
-#     eightgen_egg_moves = pd.concat([eightgen_egg_moves,exclusive_move_case], ignore_index=True)
-# bdsp_egg_moves[9] = bdsp_egg_moves[1]
-# bdsp_egg_moves = bdsp_egg_moves.drop(columns=1)
-# bdsp_egg_moves.columns = range(len(bdsp_egg_moves.columns))
-# eightgen_egg_moves = pd.concat([eightgen_egg_moves,bdsp_egg_moves], axis=0, ignore_index=True)
 
 try:
     m = Mega_Pokemon(x)
