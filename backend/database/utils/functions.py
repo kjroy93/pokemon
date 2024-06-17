@@ -19,6 +19,48 @@ def remove_string(data:List[str]):
 def make_dict(elemental:list, v:list):
     return dict(zip(elemental,v))
 
+def eliminate_excess(positions:list[int], scrap:list[Tag | NavigableString]):
+    return [element for idx, element in enumerate(scrap) if idx not in positions]
+
+def is_physical_attack(table:List[Tag], index:int):
+    return any(word in elements_atk(table[index], 1) for word in ['Physical', 'Other'])
+
+def is_special_attack(table:List[Tag], index:int):
+    return any(word in elements_atk(table[index], 1) for word in ['Special'])
+
+def is_normal_form(table:List[Tag], index:int):
+    return any(word in table[index].get('alt','') for word in ['Normal'])
+
+def is_regional_form(table:List[Tag], index:int):
+    return any(word in table[index].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
+
+def normal_regional(pokemon_ability:dict | list):
+    if isinstance(pokemon_ability,dict):
+        k = pokemon_ability.keys()
+        return True if any([i in ['Alolan','Galarian','Hisuian','Paldean'] for i in k]) else False
+    elif isinstance(pokemon_ability,list):
+        return False
+
+def regional_case(numerator:int, scrap:list[Tag]):
+    last_element = 11
+    if hasattr(scrap[numerator+9],'get'):
+        return last_element if numerator == 0 or isinstance(scrap[numerator+9].get('alt',''),str) else 10
+    else:
+        return last_element - 1
+
+def regional_z_max(numerator:int, scrap:list[Tag]):
+    last_element = 11
+    if hasattr(scrap[numerator+3],'get'):
+        return last_element if numerator == 0 or isinstance(scrap[numerator+8].get('alt',''),str) else 10
+    else:
+        return (10 if any(
+                word in scrap[numerator+7].get('alt','')
+                for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean', 'Normal'] if not isinstance(
+                    scrap[numerator+7], NavigableString
+                )
+            ) and hasattr(scrap[numerator+8], 'get') else 9
+        ) if len(scrap) - numerator > 9 else 8
+
 def elements_atk(a_tag:Tag, control:int=None):
     elemental_types = [
         'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice',
@@ -64,19 +106,7 @@ def list_of_elements(location:ResultSet[Tag]):
     
     return types
 
-def is_physical_attack(table:List[Tag], index:int):
-    return any(word in elements_atk(table[index], 1) for word in ['Physical', 'Other'])
-
-def is_special_attack(table:List[Tag], index:int):
-    return any(word in elements_atk(table[index], 1) for word in ['Special'])
-
-def is_normal_form(table:List[Tag], index:int):
-    return any(word in table[index].get('alt','') for word in ['Normal'])
-
-def is_regional_form(table:List[Tag], index:int):
-    return any(word in table[index].get('alt','') for word in ['Alolan', 'Galarian', 'Hisuian', 'Paldean'])
-
-def egg_move_regional_form():
+def text_image_deletion():
     """
     Decorator that apply the same function, changing the string
 
