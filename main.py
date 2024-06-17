@@ -1,28 +1,22 @@
-# Dependencies
-import pandas as pd
-from bs4 import BeautifulSoup, Tag, NavigableString
+# Libraries
+from backend.database.utils import functions
 from backend.database.src.creature import Pokemon,Mega_Pokemon
 from backend.database.src.moveset import Moveset
 from backend.database.parsers import parse_movements
 
-x = Pokemon(8,'raichu')
-x.name()
-print(x.p_name)
-x.elements()
-x.weakness()
-x.stats()
-
-# Egg moves in case of regional form pokémon, for the 8th generation and 7th generation, including BDSP data
 # Class test
+x = Pokemon(8,'raichu')
 
 all_divs = x.soup.find_all('div', attrs={'align': 'center'})
 foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
 
-scrap = parse_movements.list_composition(table=foo_info[15],category='Egg Move')
-regional = parse_movements.normal_regional(x.p_elements)
-table = parse_movements.process_table_recursive(0,scrap,'Egg Move',regional_form=regional)
+x.name()
+x.elements()
 
-print(table)
+# Egg moves in case of regional form pokémon, for the 8th generation and 7th generation, including BDSP data
+scrap = parse_movements.list_composition(html=foo_info[15],category='Egg Move')
+regional = functions.normal_regional(x.p_elements)
+df = parse_movements.make_it_table(126,scrap,'Egg Move',regional_form=regional)
 
 try:
     m = Mega_Pokemon(x)

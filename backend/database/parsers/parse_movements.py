@@ -2,11 +2,11 @@
 from typing import Literal, List
 
 # Dependencies
-from bs4 import NavigableString, Tag, BeautifulSoup, ResultSet
+from bs4 import NavigableString, Tag, BeautifulSoup
 
 # Libraries
 from backend.database.utils import functions
-from backend.database.utils.functions import text_image_deletion
+from backend.database.utils.functions import solve_img_tag
 
 def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None) -> list[Tag | NavigableString]:
     """
@@ -130,7 +130,7 @@ def define_table(group:list[int]=None, positions:list[int]=None, scrap:list[Tag]
 
     return main_table
 
-def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString]):
+def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString], regional:bool=None):
     """
     Fixes specific issues in the egg move section of the table.
 
@@ -142,7 +142,7 @@ def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString])
     Returns:
     - A list of Tag objects after applying the fixes.
     """
-    @text_image_deletion()
+    @solve_img_tag(regional)
     def remove_string(to_fix:List[Tag | NavigableString], string:str=None):
         """
         Process and fix regional images in the section.
@@ -162,13 +162,20 @@ def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString])
 
     to_fix = scrap[start_index:start_index + length]
 
-    # The seventh and eighth element is always the table with regional forms, or with the 'Details' URL with possible parents to inherith egg move
+    # The seventh and eighth element is always the table with regional forms, or with the 'Details' URL with possible parents to inherith egg move.
     location = 7 if length == 9 or scrap[start_index].text == 'Volt Tackle' else 8
 
-    # Process the table where the normal and regional form are located in the html Serebii.net. Delete the 'Details' string
+    # Process the table where the normal and regional form are located in the html Serebii.net. Delete the 'Details' string.
     fixed = remove_string(to_fix,string='Details',data_location=location)
 
     return fixed
+
+@solve_img_tag()
+def pre_evolution_moves(tag:Tag=None, line:list[Tag | NavigableString]=None):
+    information = tag.get('alt')
+    line[7] = information
+
+    return line
 
 def empty_category_fix(to_fix:list, index:int):
     if index == 2:
@@ -188,7 +195,35 @@ def category_fix(to_fix:list, index:int, element:bool):
     else:
         pass
 
-def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
+def max_z_table_segment(start_index:int=None, length:int=None, table:list=None, indexes:list=None):
+    """
+    Fixes segments of a table based on specific indexes and categories for 'Max Move' or 'Z Move' entries.
+
+    Parameters:
+    - start_index (int): The starting index in the `table` list from where the segment should be fixed.
+    - length (int): The number of elements in the segment to be fixed.
+    - table (list): The list of HTML tags and strings to be processed.
+    - indexes (list): The list of indexes to be checked and potentially fixed within the segment.
+
+    Returns:
+    - function: A nested function `internal` that, when called, returns the fixed segment.
+
+    The function operates as follows:
+    1. Extracts the segment of the table to be fixed using `start_index` and `length`.
+    2. Iterates over the provided `indexes` and performs fixes based on the `idx` value:
+        - For indexes 2 and 3, checks if the element is a physical or special attack and fixes the category accordingly.
+        - For indexes 8 and 9, checks if the element is a normal or regional form and fixes the category accordingly.
+    3. If the `execution_pass` function returns `True`, it breaks out of the loop early.
+    4. Returns the fixed segment via a nested function `internal`.
+
+    Example:
+        >>> table = [NavigableString('Example')] * 12  # Example table data
+        >>> result_func = max_z_table_segment(0, 12, table, [2, 3, 8, 9])
+        >>> fixed_segment = result_func()
+        >>> print(fixed_segment)
+        [NavigableString('Example'), ...]  # Fixed segment data
+    """
+
     to_fix = table[start_index:start_index+length]
     for idx in indexes:
         if execution_pass(len(to_fix),'Max Move') == True:
@@ -205,12 +240,36 @@ def max_z_table_segment(start_index:int, length:int, table:list, indexes:list):
                 element = functions.is_normal_form(to_fix,idx) if idx == 8 else functions.is_regional_form(to_fix,idx)
                 category_fix(to_fix,idx,element)
     
-    def internal():
+    def internal() -> list[Tag | NavigableString]:
         return to_fix
     
     return internal
 
 def execution_pass(to_fix:int, category:Literal['Max Move', 'Z Move']=None):
+    """
+    Determines the indexes or a boolean value based on the `category` and the value of `to_fix`.
+
+    Parameters:
+    - to_fix (int): The number of elements in the line to be fixed.
+    - category (Literal['Max Move', 'Z Move']): The category of the move. Can be 'Max Move' or 'Z Move'.
+
+    Returns:
+    - list[int] or bool: Returns a list of indexes [2, 3, 8, 9] if `to_fix` is not 11 and `category` is 'Max Move' or 'Z Move'.\n
+        Returns `True` if `to_fix` is 11 and `category` is 'Max Move' or 'Z Move'.
+
+    Example:
+        >>> execution_pass(10, 'Max Move')
+        [2, 3, 8, 9]
+        
+        >>> execution_pass(11, 'Max Move')
+        True
+        
+        >>> execution_pass(11, 'Z Move')
+        True
+        
+        >>> execution_pass(10, 'Z Move')
+        [2, 3, 8, 9]
+    """
     match category:
         case 'Max Move' | 'Z Move':
             if to_fix != 11:
@@ -218,47 +277,99 @@ def execution_pass(to_fix:int, category:Literal['Max Move', 'Z Move']=None):
             else:
                 return True
 
-def list_lenght(numerator:int, scrap:list[Tag | NavigableString], category:str=None, regional_form:bool=None):
+def list_lenght(numerator:int, scrap:list[Tag | NavigableString], category:str=None, regional_form:bool=None) -> Literal[8, 9, 10, 11]:
+    """
+    Function that permits the recursive table process, in order to know the amount of elements 
+    that certain line needs to have in order to be correct in the main table.
+
+    Parameters:
+    - numerator: The position in the list to start from.
+    - scrap: The list of HTML tags and strings to process.
+    - category: The category to evaluate.
+    - regional_form: Boolean indicating if it is a regional form.
+
+    Returns:
+    - The number of elements that the line needs to have in order to be correct in the main table.
+    """
+
     if not regional_form:
-        last_element = 9 if category != 'Pre_evolution' else 10
-        l = last_element if category != 'Max Move' else 11
-    
+        if category != 'Pre_evolution' and category != 'Max Move':
+            length = 9
+        elif category == 'Pre_evolution':
+            length = 10
+        elif category == 'Max Move':
+            length = 11
     else:
-        match category:
-            case 'Egg Move':
-                data_location = 1
-                l = 10 if (scrap[numerator+data_location].text in ['Only',' Only']) or scrap[numerator].text == 'Volt Tackle' else 9
-            case 'Z Move' | 'Max Move':
-                l = functions.regional_z_max(numerator,scrap)
-            case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
-                l = functions.regional_case(numerator,scrap)
-
-    def internal() -> Literal[8, 9, 10, 11]:
-        return l
+        length = 8
     
-    return internal
+    match category:
+        case 'Egg Move':
+            data_location = 1
+            if 'Only' in scrap[numerator+data_location].text or scrap[numerator].text == 'Volt Tackle':
+                length = 10
+            else:
+                length = 9
+        case 'Z Move' | 'Max Move':
+            length = functions.regional_z_max(numerator,scrap)
+        case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
+            length = functions.regional_case(numerator,scrap)
+    
+    return length
 
-def process_table_recursive(start_index:int=None, scrap:list[Tag | NavigableString]=None, category:Literal['Max Move','Egg Move']=None, regional_form:bool=None):
+def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None, category:Literal['Max Move','Egg Move','Pre_evolution']=None, regional_form:bool=None):
+    """
+    Creates a table of elements by recursively processing lines from the input list of HTML tags and strings.
+
+    Parameters:
+    - start_index (int): The starting index in the `scrap` list from where the processing should begin. Default is 0.
+    - scrap (list[Tag | NavigableString]): A list of HTML tags and navigable strings to be processed.
+    - category (Literal['Max Move', 'Egg Move', 'Pre_evolution']): The category of elements to process. It determines the specific logic applied to each line.
+    - regional_form (bool): A flag indicating whether the elements belong to a regional form.
+
+    Returns:
+    - list: A list of processed lines, where each line is either a list of elements from the `scrap` list or a modified segment based on the category-specific logic.
+
+    The function operates as follows:
+    1. Checks if the `start_index` is out of bounds for the `scrap` list. If so, returns an empty list.
+    2. Determines the number of elements (`items_in_list`) in the current line to be processed using the `list_lenght` function.
+    3. Processes the line based on the specified `category`:
+        - For 'Max Move': Uses `execution_pass` to get indexes and processes with `max_z_table_segment` or returns the segment directly.
+        - For 'Egg Move': Fixes the line using `egg_move_fix`.
+        - For 'Pre_evolution': Fixes the line using `pre_evolution_moves`.
+    4. Recursively calls itself to process the next segment of the `scrap` list.
+
+    Example:
+        >>> from bs4 import BeautifulSoup
+        >>> html = "<div>some html content</div>"
+        >>> soup = BeautifulSoup(html, 'html.parser')
+        >>> elements = list(soup.children)
+        >>> make_it_table(0, elements, 'Egg Move', False)
+        [['some processed content based on egg move logic']]
+    """
+
     length = len(scrap)
     if start_index >= length:
         return []
     
     # int that determines the amount of elements in the the line to be fixed.
-    items_in_list = list_lenght(start_index,scrap,category,regional_form)()
+    items_in_list = list_lenght(start_index,scrap,category,regional_form)
 
     match category:
         case 'Max Move':
+            # Determine if there is indexes to be processed
             indexes = execution_pass(items_in_list,category)
+
             if type(indexes) != bool:
                 line = max_z_table_segment(start_index,items_in_list,scrap,indexes)()
-                return [line] + process_table_recursive(start_index+items_in_list,scrap,category,regional_form)
+                return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
             else:
-                return [scrap[start_index:start_index+items_in_list]] + process_table_recursive(start_index+items_in_list,scrap,category,regional_form)
+                return [scrap[start_index:start_index+items_in_list]] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
         
         case 'Egg Move':
-            line = egg_move_fix(start_index,items_in_list,scrap)
-            return [line] + process_table_recursive(start_index+items_in_list,scrap,category,regional_form)
+            line = egg_move_fix(start_index,items_in_list,scrap,regional_form)
+            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
         
         case 'Pre_evolution':
-            line = scrap[start_index:start_index+items_in_list]
-            return [line] + process_table_recursive(start_index+items_in_list,scrap,category)
+            to_fix = scrap[start_index:start_index+items_in_list]
+            line = pre_evolution_moves(line=to_fix,data_location=7)
+            return [line] + make_it_table(start_index+items_in_list,scrap,category)
