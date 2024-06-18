@@ -1,12 +1,26 @@
 # Standard libraries of Python
-from typing import Literal, List
+from typing import Literal
 
 # Dependencies
 from bs4 import NavigableString, Tag, BeautifulSoup
 
 # Libraries
 from backend.database.utils import functions
-from backend.database.utils.functions import solve_img_tag
+from backend.database.utils.decorators import solve_img_issue, check_form_category
+
+@check_form_category()
+def attack_form_process(boolean:bool=None, key_word:str=None):
+    if boolean:
+        return key_word
+    else:
+        return 'N/A'
+    
+@solve_img_issue()
+def pre_evolution_moves(tag:Tag=None, line:list[Tag | NavigableString]=None):
+    information = tag.get('alt')
+    line[7] = information
+
+    return line
 
 def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None) -> list[Tag | NavigableString]:
     """
@@ -28,7 +42,7 @@ def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None)
         - An integer representing the index of the last relevant line in the table.
     """
 
-    def egg_move_last_line(scrap:List[Tag | NavigableString]=None):
+    def egg_move_last_line(scrap:list[Tag | NavigableString]=None):
         """
         Determine the last relevant line in the table based on the presence of an 'img' tag.
 
@@ -130,7 +144,33 @@ def define_table(group:list[int]=None, positions:list[int]=None, scrap:list[Tag]
 
     return main_table
 
-def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString], regional:bool=None):
+def tm_tr_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString]):
+    line = scrap[start_index:start_index + length]
+
+    match length:
+        case 11:
+            for idx in [2,8,9]:
+                result = attack_form_process(line,idx)
+                if result:
+                    line[idx] = result
+            return line
+        
+        case 10:
+            for idx in [2,8,9]:
+                result = attack_form_process(line,idx)
+                if result != 'N/A':
+                    line[idx] = result
+                else:
+                    line.insert(idx,result)
+            
+            return line
+        
+        case _:
+            idx = 3
+            result = attack_form_process(line,idx)
+            line[idx] = result
+
+def egg_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString], regional:bool=None):
     """
     Fixes specific issues in the egg move section of the table.
 
@@ -142,8 +182,8 @@ def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString],
     Returns:
     - A list of Tag objects after applying the fixes.
     """
-    @solve_img_tag(regional)
-    def remove_string(to_fix:List[Tag | NavigableString], string:str=None):
+    @solve_img_issue(regional)
+    def remove_string(to_fix:list[Tag | NavigableString], string:str=None):
         """
         Process and fix regional images in the section.
         
@@ -166,36 +206,16 @@ def egg_move_fix(start_index:int, length:int, scrap:List[Tag | NavigableString],
     location = 7 if length == 9 or scrap[start_index].text == 'Volt Tackle' else 8
 
     # Process the table where the normal and regional form are located in the html Serebii.net. Delete the 'Details' string.
-    fixed = remove_string(to_fix,string='Details',data_location=location)
+    line = remove_string(to_fix,string='Details',data_location=location)
 
-    return fixed
-
-@solve_img_tag()
-def pre_evolution_moves(tag:Tag=None, line:list[Tag | NavigableString]=None):
-    information = tag.get('alt')
-    line[7] = information
+    idx = 2
+    make_contact = attack_form_process(line,idx)
+    if make_contact != 'N/A':
+        line[idx] = make_contact
 
     return line
 
-def empty_category_fix(to_fix:list, index:int):
-    if index == 2:
-        to_fix.insert(index, 'Other')
-        to_fix.insert(index+1, 'N/A')
-        to_fix.insert(index+2, '--')
-    else:
-        to_fix.insert(index, 'N/A')
-
-def category_fix(to_fix:list, index:int, element:bool):
-    if index == 2 and not element:
-        to_fix.insert(index,'N/A')
-    elif index == 3 and isinstance(to_fix[index], NavigableString):
-        to_fix.insert(index,'N/A')
-    elif index == 8 or index == 9:
-        to_fix.insert(index,'N/A')
-    else:
-        pass
-
-def max_z_table_segment(start_index:int=None, length:int=None, table:list=None, indexes:list=None):
+def max_z_table_segment(start_index:int=None, length:int=None, scrap:list[Tag | NavigableString]=None, indexes:list[int]=None):
     """
     Fixes segments of a table based on specific indexes and categories for 'Max Move' or 'Z Move' entries.
 
@@ -224,60 +244,40 @@ def max_z_table_segment(start_index:int=None, length:int=None, table:list=None, 
         [NavigableString('Example'), ...]  # Fixed segment data
     """
 
-    to_fix = table[start_index:start_index+length]
-    for idx in indexes:
-        if execution_pass(len(to_fix),'Max Move') == True:
-            break
-        
+    line = scrap[start_index:start_index+length]
+    for idx in indexes:        
         match idx:
             case 2 | 3:
-                if not isinstance(to_fix[idx], NavigableString):
-                    element = functions.is_physical_attack(to_fix,idx) if idx == 2 else functions.is_special_attack(to_fix,idx)
-                    category_fix(to_fix,idx,element)
+                make_contact = attack_form_process(line,idx)
+                if make_contact == 'N/A':
+                    line.insert(idx,make_contact)
+                elif make_contact == 'Other' and idx == 2:
+                    functions.empty_category_fix(line,idx)
                 else:
-                    empty_category_fix(to_fix,idx)
+                    line[idx] = make_contact
+
             case 8 | 9:
-                element = functions.is_normal_form(to_fix,idx) if idx == 8 else functions.is_regional_form(to_fix,idx)
-                category_fix(to_fix,idx,element)
+                form = attack_form_process(line,idx)
+                if form == 'N/A':
+                    line.insert(idx,form)
+                elif form and len(line) != 11 and form in ['Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']:
+                    line.insert(idx, 'N/A')
+                else:
+                    line[idx] = form
     
     def internal() -> list[Tag | NavigableString]:
-        return to_fix
+        return line
     
     return internal
 
-def execution_pass(to_fix:int, category:Literal['Max Move', 'Z Move']=None):
-    """
-    Determines the indexes or a boolean value based on the `category` and the value of `to_fix`.
+def move_tutor():
+    pass
 
-    Parameters:
-    - to_fix (int): The number of elements in the line to be fixed.
-    - category (Literal['Max Move', 'Z Move']): The category of the move. Can be 'Max Move' or 'Z Move'.
-
-    Returns:
-    - list[int] or bool: Returns a list of indexes [2, 3, 8, 9] if `to_fix` is not 11 and `category` is 'Max Move' or 'Z Move'.\n
-        Returns `True` if `to_fix` is 11 and `category` is 'Max Move' or 'Z Move'.
-
-    Example:
-        >>> execution_pass(10, 'Max Move')
-        [2, 3, 8, 9]
-        
-        >>> execution_pass(11, 'Max Move')
-        True
-        
-        >>> execution_pass(11, 'Z Move')
-        True
-        
-        >>> execution_pass(10, 'Z Move')
-        [2, 3, 8, 9]
-    """
-    match category:
-        case 'Max Move' | 'Z Move':
-            if to_fix != 11:
-                return [2,3,8,9]
-            else:
-                return True
-
-def list_lenght(numerator:int, scrap:list[Tag | NavigableString], category:str=None, regional_form:bool=None) -> Literal[8, 9, 10, 11]:
+def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
+    category:Literal['TM','TR','HM','Z Move','Max Move',
+        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None,
+    regional_form:bool=None) -> Literal[8, 9, 10, 11]:
+    
     """
     Function that permits the recursive table process, in order to know the amount of elements 
     that certain line needs to have in order to be correct in the main table.
@@ -293,14 +293,21 @@ def list_lenght(numerator:int, scrap:list[Tag | NavigableString], category:str=N
     """
 
     if not regional_form:
-        if category != 'Pre_evolution' and category != 'Max Move':
-            length = 9
+        if any(
+            word in category
+            for word in 
+            ['Technical Machine','Technical Record', 'Hidden Machine', 'Level Up',
+             'TM','TR','HM', 'BDSP Technical Machine']
+        ):
+            length = 8
         elif category == 'Pre_evolution':
             length = 10
         elif category == 'Max Move':
             length = 11
-    else:
-        length = 8
+        elif category != 'Pre_evolution' and category != 'Max Move':
+            length = 9
+        
+        return length
     
     match category:
         case 'Egg Move':
@@ -316,14 +323,18 @@ def list_lenght(numerator:int, scrap:list[Tag | NavigableString], category:str=N
     
     return length
 
-def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None, category:Literal['Max Move','Egg Move','Pre_evolution']=None, regional_form:bool=None):
+def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
+    category:Literal['TM','TR','HM','Z Move','Max Move',
+        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None,
+    regional_form:bool=None):
+    
     """
     Creates a table of elements by recursively processing lines from the input list of HTML tags and strings.
 
     Parameters:
     - start_index (int): The starting index in the `scrap` list from where the processing should begin. Default is 0.
     - scrap (list[Tag | NavigableString]): A list of HTML tags and navigable strings to be processed.
-    - category (Literal['Max Move', 'Egg Move', 'Pre_evolution']): The category of elements to process. It determines the specific logic applied to each line.
+    - category: The category of elements to process. It determines the specific logic applied to each line.
     - regional_form (bool): A flag indicating whether the elements belong to a regional form.
 
     Returns:
@@ -357,13 +368,9 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None, cat
     match category:
         case 'Max Move':
             # Determine if there is indexes to be processed
-            indexes = execution_pass(items_in_list,category)
-
-            if type(indexes) != bool:
-                line = max_z_table_segment(start_index,items_in_list,scrap,indexes)()
-                return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
-            else:
-                return [scrap[start_index:start_index+items_in_list]] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
+            indexes = [2,3,8,9]
+            line = max_z_table_segment(start_index,items_in_list,scrap,indexes)()
+            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
         
         case 'Egg Move':
             line = egg_move_fix(start_index,items_in_list,scrap,regional_form)
@@ -373,3 +380,7 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None, cat
             to_fix = scrap[start_index:start_index+items_in_list]
             line = pre_evolution_moves(line=to_fix,data_location=7)
             return [line] + make_it_table(start_index+items_in_list,scrap,category)
+        
+        case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
+            line = tm_tr_move_fix(start_index,items_in_list,scrap)
+            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
