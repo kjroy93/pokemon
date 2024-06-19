@@ -10,8 +10,8 @@ def number_generator(init:int):
         yield number
     
 def remove_string(data:list[str]):
-    s = 'Attacking Move Type: ','-type'
-    for string in s:
+    words = 'Attacking Move Type: ','-type'
+    for string in words:
         data = list(map(lambda x: x.replace(string,''),data))
 
     return data

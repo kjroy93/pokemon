@@ -1,9 +1,15 @@
 # Standard libraries of Python
 from functools import wraps
 from bs4 import BeautifulSoup, Tag, NavigableString
-from typing import Callable
+from typing import Callable, Literal
 
-def line_elements(index:int=None):
+def line_elements(index:int=None,category:Literal['TM','TR','HM','Z Move','Max Move',
+        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None):
+    
+    if category not in ['Max Move', 'Z Move'] and index not in [8,9]:
+        word = ['Physical', 'Special', 'Other']
+        return word
+
     match index:
         case 2:
             word = ['Physical', 'Other']
@@ -22,25 +28,42 @@ def check_word_in_line(func:Callable):
         if word_in_line(word,line,location_index):
             return word, True
         
-        return func(*args,**kwargs)
+        return func(*args,**kwargs), location_index
     
     return wrapper
 
 def word_in_line(word:str, line:list[Tag | NavigableString], location_index:int) -> bool:
-    return word in line[location_index].get('alt', '')
+    line_length = len(line)
+    if 0 <= location_index < line_length:
+        element = line[location_index]
+        if isinstance(element, Tag):
+
+            return word in element.get('alt', '')
+        
+    return False
+
+def form_revision(result:str):
+    if result != 'Normal':
+        return 'N/A', True
+    else:
+        return result
 
 @check_word_in_line
+@form_revision
 def default_return() -> tuple[str, bool] | tuple[None, bool]:
     return None, False
 
 def check_form_category():
     def decorator(func:Callable):
         @wraps(func)
-        def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None, *args, **kwargs) -> str | bool:
-            key_word = line_elements(location_index)
+        def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None, category:Literal['TM','TR','HM','Z Move','Max Move',
+        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None, *args, **kwargs) -> str | bool:
+            
+            key_word = line_elements(location_index,category)
             if isinstance(key_word,list):
                 for word in key_word:
                     result, flag = default_return(word,line,location_index)
+                    result, flag = form_revision(result,location_index)
                     if flag:
                         break
 

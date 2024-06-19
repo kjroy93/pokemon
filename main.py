@@ -16,12 +16,10 @@ foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
 x.name()
 x.elements()
 
-# Max Moves and Z Moves data scrap from Serebii.net, for pokemon with regional forms
-scrap = parse_movements.list_composition(foo_info[17])
-positions, group = parse_movements.obtain_positions(scrap)
-main_table = parse_movements.define_table(group,positions,scrap)
+# TM | TR | Technical Machine | Technical Record case for regional form pokémon in the 8th generation and 7th generation
+scrap = parse_movements.list_composition(foo_info[12])
 regional = functions.normal_regional(x.p_elements)
-df = parse_movements.make_it_table(start_index=63,scrap=main_table,category='Max Move',regional_form=regional)
+df = parse_movements.make_it_table(start_index=264,scrap=scrap,category='TM',regional_form=regional)
 
 pd.DataFrame(df)
 

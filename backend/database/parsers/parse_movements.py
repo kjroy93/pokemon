@@ -144,20 +144,21 @@ def define_table(group:list[int]=None, positions:list[int]=None, scrap:list[Tag]
 
     return main_table
 
-def tm_tr_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString]):
+def tm_tr_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString], category:Literal['TM','TR','HM','Z Move','Max Move',
+        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None):
     line = scrap[start_index:start_index + length]
 
     match length:
         case 11:
-            for idx in [2,8,9]:
-                result = attack_form_process(line,idx)
+            for idx in [3,8,9]:
+                result = attack_form_process(line,idx,category)
                 if result:
                     line[idx] = result
             return line
         
         case 10:
-            for idx in [2,8,9]:
-                result = attack_form_process(line,idx)
+            for idx in [3,8,9]:
+                result = attack_form_process(line,idx,category)
                 if result != 'N/A':
                     line[idx] = result
                 else:
@@ -249,10 +250,11 @@ def max_z_table_segment(start_index:int=None, length:int=None, scrap:list[Tag | 
         match idx:
             case 2 | 3:
                 make_contact = attack_form_process(line,idx)
-                if make_contact == 'N/A':
-                    line.insert(idx,make_contact)
-                elif make_contact == 'Other' and idx == 2:
+                if make_contact == 'N/A' and len(line) < 10:
                     functions.empty_category_fix(line,idx)
+                    indexes.remove(indexes[1])
+                elif make_contact == 'N/A':
+                    line.insert(idx,make_contact)
                 else:
                     line[idx] = make_contact
 
@@ -382,5 +384,5 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
             return [line] + make_it_table(start_index+items_in_list,scrap,category)
         
         case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
-            line = tm_tr_move_fix(start_index,items_in_list,scrap)
+            line = tm_tr_move_fix(start_index,items_in_list,scrap,category)
             return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
