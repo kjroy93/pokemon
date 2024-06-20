@@ -6,48 +6,81 @@ from bs4 import NavigableString, Tag, BeautifulSoup
 
 # Libraries
 from backend.database.utils import functions
-from backend.database.utils.decorators import solve_img_issue, check_form_category
+from backend.database.utils.decorators import solve_img_issue, check_form_category, catt_form_logic
 
+@catt_form_logic()
+def obtain_catt_form(answer:bool|str=None, line:list[Tag | NavigableString]=None, idx:int=None, catt_form:str|bool=None):
+    """
+    Functions decorated to handle form category logic and attack form processing.
+
+    Functions:
+    - obtain_catt_form(answer: bool | str = None, line: list[Tag | NavigableString] = None, idx: int = None, catt_form: str | bool = None) -> list[Tag | NavigableString]:
+        Processes and updates a line with a categorical form.
+
+    Parameters:
+    - answer (bool | str, optional): The result of categorical form logic.
+    - line (list[Tag | NavigableString], optional): The list of BeautifulSoup Tag objects and NavigableStrings to modify.
+    - idx (int, optional): The index in the line where the categorical form is applied.
+    - catt_form (str | bool, optional): The categorical form to apply.
+
+    Returns:
+    - list[Tag | NavigableString]: The modified line after applying the categorical form logic.
+    """
+    if isinstance(answer,bool):
+        line[idx] = catt_form
+    elif isinstance(answer,str):
+        line.insert(idx,answer)
+
+    return line
+        
 @check_form_category()
 def attack_form_process(boolean:bool=None, key_word:str=None):
+    """
+    Determines the attack form based on boolean logic.
+
+    Parameters:
+    - boolean (bool, optional): Boolean flag indicating if the attack form is valid.
+    - key_word (str, optional): The key word representing the attack form.
+
+    Returns:
+    - str: The determined attack form or 'N/A' if not valid.
+    """
     if boolean:
         return key_word
     else:
         return 'N/A'
-    
-@solve_img_issue()
-def pre_evolution_moves(tag:Tag=None, line:list[Tag | NavigableString]=None):
-    information = tag.get('alt')
-    line[7] = information
-
-    return line
 
 def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None) -> list[Tag | NavigableString]:
     """
-    Function to obtain the clean components of the html table where the info is located,
-    in order to sort, adjust and fix the data.
+    Extracts and processes clean components from an HTML table represented as a BeautifulSoup object.
 
     Parameters:
-    - html: It must be a BeautifulSoup object representing the HTML table.
-    - category: A string that specify the category of the data (optional).
+    - html (BeautifulSoup, optional): The BeautifulSoup object representing the HTML table.
+    - category (Literal['Egg Move'], optional): Specifies the category of the data.
 
     Returns:
-    - A list of BeatifulSoup Tag or NavigableString objects after filtering and processing
-    
-    Functions:
-    - egg_move_last_line(scrap): Determines the last relevant line in the table based on the presence of an 'img' tag.
-        Parameters:
-        - scrap: The BeautifulSoup object representing the table.
-        Returns:
-        - An integer representing the index of the last relevant line in the table.
-    """
+    - list[Tag | NavigableString]: A list of BeautifulSoup Tag objects and NavigableStrings after filtering and processing.
 
+    Functions:
+    - egg_move_last_line(scrap: list[Tag | NavigableString] = None) -> int:
+        Determines the index of the last relevant line in the table based on the presence of an 'img' tag.
+
+        Parameters:
+        - scrap (list[Tag | NavigableString]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
+
+        Returns:
+        - int: The index of the last relevant line in the table.
+    """
     def egg_move_last_line(scrap:list[Tag | NavigableString]=None):
         """
-        Determine the last relevant line in the table based on the presence of an 'img' tag.
+        Determines the last relevant line in the table based on the presence of an 'img' tag.
+
+        Parameters:
+        - scrap (list[Tag | NavigableString]): The list of BeautifulSoup Tag objects and NavigableStrings
+          representing the table.
 
         Returns:
-        - An integer representing the index of the last relevant line in the table.
+        - int: The index of the last relevant line in the table.
         """
         lines = [list(range(i,i+8)) for i in range(0,len(scrap),9)]
 
@@ -83,8 +116,39 @@ def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None)
     return scrap
 
 def obtain_positions(scrap:list[Tag | NavigableString]=None):
-    
+    """
+    Obtains positions of specific elements based on conditions within the scrap list.
+
+    Parameters:
+    - scrap (list[Tag | NavigableString], optional): A list of BeautifulSoup Tag objects and NavigableStrings.
+
+    Returns:
+    - list[int]: A refined list of positions after processing based on specific conditions.
+
+    Functions:
+    - obtain_logs(): Inner function that collects indices of elements satisfying certain conditions.
+    - check_list(positions:list[int]=None, index:int=None, length:int=None): Inner function that refines positions based on sequential conditions.
+
+    Example:
+        >>> scrap = [Tag(), NavigableString('Example'), Tag(), Tag(), NavigableString('Another'), Tag()]
+        >>> positions = obtain_positions(scrap)
+        >>> print(positions)
+        [1, 3, 4]
+
+    Notes:
+    - This function operates on a scrap list assumed to contain relevant elements.
+    - The `functions.elements_atk` function is referenced in `obtain_logs` for element categorization.
+    """
     def obtain_logs():
+        """
+        Collects indices of elements in the scrap list that satisfy specific conditions.
+
+        Returns:
+        - list[int]: A list of indices where elements meet the condition.
+
+        Notes:
+        - Uses `functions.elements_atk` to categorize elements.
+        """
         logs = []
 
         for n,i in enumerate(scrap):
@@ -97,16 +161,47 @@ def obtain_positions(scrap:list[Tag | NavigableString]=None):
         return logs
     
     def check_list(positions:list=None, index:int=None, length:int=None):
+        """
+        Refines positions based on sequential conditions.
+
+        Parameters:
+        - positions (list[int], optional): The list of positions to be refined.
+        - index (int, optional): The starting index for checking positions.
+        - length (int, optional): The length of the positions list.
+
+        Returns:
+        - list[int]: The refined list of positions after processing.
+
+        Notes:
+        - Modifies the positions list in place.
+        """
         def next_element(index:int):
+            """
+            Calculates the index of the next element.
+
+            Parameters:
+            - index (int): The current index.
+
+            Returns:
+            - int: The index of the next element.
+            """
             return index + 1
         
         def element_del(table:list, index:int):
+            """
+            Deletes an element from the positions list and adjusts length.
+
+            Parameters:
+            - table (list[int]): The list of positions.
+            - index (int): The index of the element to delete.
+            """
             table[index] = 4
             del table[next_key]
 
         while index < length - 1:
             next_key = next_element(index)
 
+            # Search in the list if the next key is three (3) or one (1), depending on the initial value in position[index]
             if (positions[index] == 1 and positions[next_key] == 3) or (positions[index] == 3 and positions[next_key] == 1):
                 element_del(positions,index)
                 length = len(positions)
@@ -116,11 +211,17 @@ def obtain_positions(scrap:list[Tag | NavigableString]=None):
         
         return positions
     
+    # From the scrap, obtain the registry of the location of duplicated data
     locations = obtain_logs()
     range_end = locations[-1] if locations else 0
+
+    # Construct the ranges from 1 to 10 and the ones that follows, in order to count the amount of numbers that appears in them
     ranges = [list(range(i,i+10)) for i in range(1,range_end,10)]
+
+    # If the position has [2,3,4,5,...], then the sum that start from range 10 to 10, will be 4
     counts = list(map(lambda group: sum(1 for num in locations if num in group), ranges))
 
+    # Eliminate the zero (0) numbers in the list
     group_by = list(filter(lambda count: count > 0, counts))
     length = len(locations)
     check_list(group_by, 0, length)
@@ -128,71 +229,152 @@ def obtain_positions(scrap:list[Tag | NavigableString]=None):
     return locations, group_by
 
 def define_table(group:list[int]=None, positions:list[int]=None, scrap:list[Tag]=None):
+    """
+    Defines positions in a table based on groups and specific positions within a scrap list.
+
+    Parameters:
+    - group (list of int, optional): List defining the number of positions in each group.
+    - positions (list of int, optional): List of specific positions within the scrap list.
+    - scrap (list of Tag, optional): List of BeautifulSoup Tag objects to process.
+
+    Returns:
+    - list of Tags and NavigableString: A main table after eliminating excess positions.
+
+    Algorithm:
+    - Initializes an empty result list.
+    - Iterates over each number in the group list:
+      - Constructs a line of positions from the positions list based on the current index and number.
+      - Determines the last element in the line.
+      - Creates a sublist that includes the last element plus one if the line has more than one element.
+      - Extends the result list with the final positions from the sublist.
+    - Processes the main table by eliminating excess positions using a function `functions.eliminate_excess`.
+
+    Example:
+        >>> group = [3, 2]
+        >>> positions = [1, 2, 3, 4, 5]
+        >>> scrap = [Tag(), Tag(), Tag(), Tag(), Tag()]
+        >>> main_table = define_table(group, positions, scrap)
+        >>> print(main_table)
+        [3, 4, 5]
+
+    Notes:
+    - The function assumes positions are 1-based indexing.
+    - The `functions.eliminate_excess` function is used to refine the main table positions.
+    """
     result = []
     index = 0
     for num in group:
         line = positions[index:index + num]
         last_element = line[-1]
 
+        # Create a new sublist that contains the next value of the last_element
         sublist = line + [last_element + 1] if len(line) > 1 else line
+
+        # Take a definitive positions for the main_table, the last three (3) or two (2) elements, depending on the lenght of the list
         final_positions = sublist[2:] if len(sublist) > 3 else sublist[1:] if len(sublist) == 3 else []
         
+        # Save the data inside the empty list.
         result.extend(final_positions)
+
+        # Increment the index by the amount of elements that were processed
         index += num
 
     main_table = functions.eliminate_excess(result,scrap)
 
     return main_table
 
-def tm_tr_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString], category:Literal['TM','TR','HM','Z Move','Max Move',
-        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None):
+def tm_tr_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString],
+        category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move','Technical Machine', 'Technical Record',
+        'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move']=None):
+    """
+    Fixes specific issues in the TM/TR/HM move sections of the table based on the provided category.
+
+    Parameters:
+    - start_index (int): The starting index in the `scrap` list from where the section begins.
+    - length (int): The length of the section to be fixed.
+    - scrap (list[Tag | NavigableString]): A list of BeautifulSoup Tag objects representing the table rows.
+    - category (Literal): The category to evaluate, affecting the logic applied to each index.
+
+    Returns:
+    - list[Tag | NavigableString]: A list of Tag objects after applying the fixes.
+
+    The function operates as follows:
+    1. Extracts the segment to be fixed using `start_index` and `length`.
+    2. Based on the length of the segment, it processes the relevant indexes:
+        - For segments of length 10 or 11, it iterates over indexes 3, 8, and 9, and fixes each using `attack_form_process` and `obtain_catt_form`.
+        - For other lengths, it processes index 3 only.
+    3. Returns the fixed segment.
+
+    Example:
+        >>> from bs4 import BeautifulSoup, NavigableString
+        >>> html = "<div>...</div>"  # Example HTML content
+        >>> soup = BeautifulSoup(html, 'html.parser')
+        >>> elements = list(soup.children)
+        >>> fixed_section = tm_tr_move_fix(0, 10, elements, 'TM')
+        >>> print(fixed_section)
+        [<Tag ...>, ...]  # Fixed segment data
+    """
     line = scrap[start_index:start_index + length]
 
     match length:
-        case 11:
-            for idx in [3,8,9]:
-                result = attack_form_process(line,idx,category)
-                if result:
-                    line[idx] = result
+        case 10 | 11:
+            iterator = [3,8,9]
+            for idx in iterator:
+                answer = attack_form_process(line,idx,category)
+                line = obtain_catt_form(line=line,index=idx,category=category,catt_form=answer)
+                
             return line
-        
-        case 10:
-            for idx in [3,8,9]:
-                result = attack_form_process(line,idx,category)
-                if result != 'N/A':
-                    line[idx] = result
-                else:
-                    line.insert(idx,result)
             
-            return line
-        
         case _:
             idx = 3
-            result = attack_form_process(line,idx)
-            line[idx] = result
+            answer = attack_form_process(line,idx,category)
+            line = obtain_catt_form(line=line,index=idx,category=category,catt_form=answer)
 
-def egg_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString], regional:bool=None):
+            return line
+
+def egg_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString],
+        category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move','Technical Machine', 'Technical Record',
+        'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move']=None, regional:bool=None):
     """
     Fixes specific issues in the egg move section of the table.
 
     Parameters:
-    - start_index: The starting index in the table from where the section begins.
-    - length: The length of the section to be fixed.
-    - table: A list of BeautifulSoup Tag objects representing the table rows.
+    - start_index (int): The starting index in the `scrap` list from where the section begins.
+    - length (int): The length of the section to be fixed.
+    - scrap (list[Tag | NavigableString]): A list of BeautifulSoup Tag objects representing the table rows.
+    - regional (bool, optional): Indicates if the elements belong to a regional form.
 
     Returns:
-    - A list of Tag objects after applying the fixes.
+    - list[Tag | NavigableString]: A list of Tag objects after applying the fixes.
+
+    The function operates as follows:
+    1. Defines an inner function `remove_string` to process and fix regional images in the section.
+    2. Extracts the segment to be fixed using `start_index` and `length`.
+    3. Determines the location of the table with regional forms or the 'Details' URL.
+    4. Uses `remove_string` to delete the 'Details' string from the segment.
+    5. Processes the segment to fix the category based on the attack form and returns the fixed segment.
+
+    Example:
+        >>> from bs4 import BeautifulSoup, NavigableString
+        >>> html = "<div>...</div>"  # Example HTML content
+        >>> soup = BeautifulSoup(html, 'html.parser')
+        >>> elements = list(soup.children)
+        >>> fixed_section = egg_move_fix(0, 9, elements, False)
+        >>> print(fixed_section)
+        [<Tag ...>, ...]  # Fixed segment data
     """
     @solve_img_issue(regional)
     def remove_string(to_fix:list[Tag | NavigableString], string:str=None):
         """
         Process and fix regional images in the section.
-        
-        Parameters:
-        - to_fix: The list of Tag objects and NavigableString to be fixed.
-        - string: Text to be deleted.
-        """
 
+        Parameters:
+        - to_fix (list[Tag | NavigableString]): The list of Tag objects and NavigableString to be fixed.
+        - string (str, optional): Text to be deleted.
+
+        Returns:
+        - list[Tag | NavigableString]: The fixed list of Tag objects and NavigableString.
+        """
         try:
             if to_fix[location].text == string:
                 del to_fix[location]
@@ -209,104 +391,100 @@ def egg_move_fix(start_index:int, length:int, scrap:list[Tag | NavigableString],
     # Process the table where the normal and regional form are located in the html Serebii.net. Delete the 'Details' string.
     line = remove_string(to_fix,string='Details',data_location=location)
 
-    idx = 2
-    make_contact = attack_form_process(line,idx)
-    if make_contact != 'N/A':
-        line[idx] = make_contact
+    idx = 2 if length == 9 or scrap[start_index].text == 'Volt Tackle' else 3
+    answer = attack_form_process(line,idx,category)
+    line = obtain_catt_form(line=line,index=idx,category=category,catt_form=answer)
 
     return line
 
-def max_z_table_segment(start_index:int=None, length:int=None, scrap:list[Tag | NavigableString]=None, indexes:list[int]=None):
+def max_z_table_segment(start_index:int=None, length:int=None, scrap:list[Tag | NavigableString]=None, indexes:list[int]=None,
+                        category:Literal[
+                        'TM','TR','HM','Z Move','Max Move',
+                        'Technical Machine', 'Technical Record', 'Hidden Machine',
+                        'Level Up', 'Pre_evolution', 'Egg Move']=None,):
     """
     Fixes segments of a table based on specific indexes and categories for 'Max Move' or 'Z Move' entries.
 
     Parameters:
-    - start_index (int): The starting index in the `table` list from where the segment should be fixed.
+    - start_index (int): The starting index in the `scrap` list from where the segment should be fixed.
     - length (int): The number of elements in the segment to be fixed.
-    - table (list): The list of HTML tags and strings to be processed.
-    - indexes (list): The list of indexes to be checked and potentially fixed within the segment.
+    - scrap (list[Tag | NavigableString]): The list of HTML tags and strings to be processed.
+    - indexes (list[int]): The list of indexes to be checked and potentially fixed within the segment.
+    - category (Literal): The category to evaluate, affecting the logic applied to each index.
 
     Returns:
-    - function: A nested function `internal` that, when called, returns the fixed segment.
+    - list: The fixed segment of the table based on the provided indexes and category-specific logic.
 
     The function operates as follows:
     1. Extracts the segment of the table to be fixed using `start_index` and `length`.
     2. Iterates over the provided `indexes` and performs fixes based on the `idx` value:
         - For indexes 2 and 3, checks if the element is a physical or special attack and fixes the category accordingly.
         - For indexes 8 and 9, checks if the element is a normal or regional form and fixes the category accordingly.
-    3. If the `execution_pass` function returns `True`, it breaks out of the loop early.
-    4. Returns the fixed segment via a nested function `internal`.
+    3. If the `answer` is 'N/A' and the line length is not 9, 10, or 11, it calls `empty_category_fix` and removes the index from the list.
+    4. Otherwise, it calls `obtain_catt_form` to fix the category based on the answer.
 
     Example:
-        >>> table = [NavigableString('Example')] * 12  # Example table data
-        >>> result_func = max_z_table_segment(0, 12, table, [2, 3, 8, 9])
-        >>> fixed_segment = result_func()
-        >>> print(fixed_segment)
+        >>> from bs4 import NavigableString
+        >>> scrap = [NavigableString('Example')] * 12  # Example table data
+        >>> result = max_z_table_segment(0, 12, scrap, [2, 3, 8, 9], 'Max Move')
+        >>> print(result)
         [NavigableString('Example'), ...]  # Fixed segment data
     """
-
     line = scrap[start_index:start_index+length]
-    for idx in indexes:        
-        match idx:
-            case 2 | 3:
-                make_contact = attack_form_process(line,idx)
-                if make_contact == 'N/A' and len(line) < 10:
-                    functions.empty_category_fix(line,idx)
-                    indexes.remove(indexes[1])
-                elif make_contact == 'N/A':
-                    line.insert(idx,make_contact)
-                else:
-                    line[idx] = make_contact
+    line_length = len(line)
+    for idx in indexes:
+        answer = attack_form_process(line,idx,category)
+        if answer == 'N/A' and line_length not in [9,10,11]:
+            functions.empty_category_fix(line,idx)
+            indexes.remove(idx)
+        else:
+            line = obtain_catt_form(line=line,index=idx,category=category,catt_form=answer)
+    
+    return line
 
-            case 8 | 9:
-                form = attack_form_process(line,idx)
-                if form == 'N/A':
-                    line.insert(idx,form)
-                elif form and len(line) != 11 and form in ['Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']:
-                    line.insert(idx, 'N/A')
-                else:
-                    line[idx] = form
-    
-    def internal() -> list[Tag | NavigableString]:
-        return line
-    
-    return internal
+@solve_img_issue()
+def pre_evolution_moves(tag:Tag=None, line:list[Tag | NavigableString]=None):
+    information = tag.get('alt')
+    line[7] = information
+
+    return line
 
 def move_tutor():
     pass
 
 def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
-    category:Literal['TM','TR','HM','Z Move','Max Move',
-        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None,
+    category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record',
+                     'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move']=None,
     regional_form:bool=None) -> Literal[8, 9, 10, 11]:
     
     """
-    Function that permits the recursive table process, in order to know the amount of elements 
-    that certain line needs to have in order to be correct in the main table.
+    Determines the number of elements that a line in the main table needs to have to be correct, 
+    based on the given category and regional form.
 
     Parameters:
-    - numerator: The position in the list to start from.
-    - scrap: The list of HTML tags and strings to process.
-    - category: The category to evaluate.
-    - regional_form: Boolean indicating if it is a regional form.
+    - numerator (int): The starting position in the `scrap` list.
+    - scrap (list[Tag | NavigableString]): The list of HTML tags and strings to process.
+    - category (Literal): The category to evaluate, affecting the number of elements required.
+    - regional_form (bool): Indicates if the elements belong to a regional form.
 
     Returns:
-    - The number of elements that the line needs to have in order to be correct in the main table.
+    - int: The number of elements that the line needs to have to be correct in the main table.
+           Possible values are 8, 9, 10, or 11.
     """
 
     if not regional_form:
         if any(
             word in category
             for word in 
-            ['Technical Machine','Technical Record', 'Hidden Machine', 'Level Up',
-             'TM','TR','HM', 'BDSP Technical Machine']
+            ['Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up',
+             'TM', 'TR', 'HM', 'BDSP Technical Machine']
         ):
             length = 8
         elif category == 'Pre_evolution':
             length = 10
         elif category == 'Max Move':
             length = 11
-        elif category != 'Pre_evolution' and category != 'Max Move':
+        else:
             length = 9
         
         return length
@@ -314,14 +492,14 @@ def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
     match category:
         case 'Egg Move':
             data_location = 1
-            if 'Only' in scrap[numerator+data_location].text or scrap[numerator].text == 'Volt Tackle':
+            if 'Only' in scrap[numerator + data_location].text or scrap[numerator].text == 'Volt Tackle':
                 length = 10
             else:
                 length = 9
         case 'Z Move' | 'Max Move':
-            length = functions.regional_z_max(numerator,scrap)
+            length = functions.regional_z_max(numerator, scrap)
         case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
-            length = functions.regional_case(numerator,scrap)
+            length = functions.regional_case(numerator, scrap)
     
     return length
 
@@ -346,9 +524,10 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
     1. Checks if the `start_index` is out of bounds for the `scrap` list. If so, returns an empty list.
     2. Determines the number of elements (`items_in_list`) in the current line to be processed using the `list_lenght` function.
     3. Processes the line based on the specified `category`:
-        - For 'Max Move': Uses `execution_pass` to get indexes and processes with `max_z_table_segment` or returns the segment directly.
+        - For 'Max Move': Uses `max_z_table_segment` to process specific indexes or returns the segment directly.
         - For 'Egg Move': Fixes the line using `egg_move_fix`.
         - For 'Pre_evolution': Fixes the line using `pre_evolution_moves`.
+        - For 'TM', 'Technical Machine', 'TR', 'Technical Record', 'HM', 'Hidden Machine': Fixes the line using `tm_tr_move_fix`.
     4. Recursively calls itself to process the next segment of the `scrap` list.
 
     Example:
@@ -359,30 +538,31 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
         >>> make_it_table(0, elements, 'Egg Move', False)
         [['some processed content based on egg move logic']]
     """
-
+    
     length = len(scrap)
     if start_index >= length:
         return []
-    
-    # int that determines the amount of elements in the the line to be fixed.
+
+    # Determine the amount of elements in the line to be processed.
     items_in_list = list_lenght(start_index,scrap,category,regional_form)
 
     match category:
         case 'Max Move':
-            # Determine if there is indexes to be processed
+            # Determine if there are indexes to be processed
             indexes = [2,3,8,9]
-            line = max_z_table_segment(start_index,items_in_list,scrap,indexes)()
-            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
+            line = max_z_table_segment(start_index,items_in_list,scrap,indexes,category)
+            return [line] + make_it_table(start_index + items_in_list,scrap,category,regional_form)
         
         case 'Egg Move':
             line = egg_move_fix(start_index,items_in_list,scrap,regional_form)
-            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
+            print(start_index)
+            return [line] + make_it_table(start_index + items_in_list,scrap,category,regional_form)
         
         case 'Pre_evolution':
-            to_fix = scrap[start_index:start_index+items_in_list]
+            to_fix = scrap[start_index:start_index + items_in_list]
             line = pre_evolution_moves(line=to_fix,data_location=7)
-            return [line] + make_it_table(start_index+items_in_list,scrap,category)
+            return [line] + make_it_table(start_index + items_in_list,scrap,category)
         
         case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
             line = tm_tr_move_fix(start_index,items_in_list,scrap,category)
-            return [line] + make_it_table(start_index+items_in_list,scrap,category,regional_form)
+            return [line] + make_it_table(start_index + items_in_list,scrap,category,regional_form)

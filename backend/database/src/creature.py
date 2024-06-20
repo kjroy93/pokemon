@@ -429,7 +429,7 @@ class Mega_Pokemon():
 
         all_divs = self.pokemon.soup.find_all('div', attrs={'align': 'center'})
         self._tables = parse.find_table_by_class(self.pokemon.gen,all_divs,search='form')
-        self._position,result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
+        self._position, result_message = parse.detect_new_forms(self.pokemon.p_name,self._tables)
         
         if not self._position:
             raise ValueError(result_message)
