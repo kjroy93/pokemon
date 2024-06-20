@@ -54,33 +54,65 @@ def list_composition(html:BeautifulSoup=None, category:Literal['Egg Move']=None)
     """
     Extracts and processes clean components from an HTML table represented as a BeautifulSoup object.
 
-    Parameters:
-    - html (BeautifulSoup, optional): The BeautifulSoup object representing the HTML table.
-    - category (Literal['Egg Move'], optional): Specifies the category of the data.
+    Args:
+    - html (BeautifulSoup, optional): The BeautifulSoup object representing the HTML table. If not provided,
+      the function will return an empty list.
+    - category (Literal['Egg Move'], optional): Specifies the category of the data. If specified as 'Egg Move',
+      it processes the table differently to filter out specific content related to egg moves.
 
     Returns:
-    - list[Tag | NavigableString]: A list of BeautifulSoup Tag objects and NavigableStrings after filtering and processing.
+    - list[Union[Tag, NavigableString]]: A list of BeautifulSoup Tag objects and NavigableStrings after filtering and processing.
+      If no 'html' parameter is provided or no relevant data is found, an empty list is returned.
 
     Functions:
-    - egg_move_last_line(scrap: list[Tag | NavigableString] = None) -> int:
+    - egg_move_last_line(scrap: list[Union[Tag, NavigableString]]) -> int:
         Determines the index of the last relevant line in the table based on the presence of an 'img' tag.
 
-        Parameters:
-        - scrap (list[Tag | NavigableString]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
+        Args:
+        - scrap (list[Union[Tag, NavigableString]]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
+          It should contain the content extracted from the HTML table.
 
         Returns:
-        - int: The index of the last relevant line in the table.
+        - int: The index of the last relevant line in the table. If no relevant line is found or 'scrap' is empty,
+          it returns -1.
+
+    Details:
+    - This function processes an HTML table represented as a BeautifulSoup object ('html'). It extracts data from table cells ('td')
+      and filters out unwanted content like nested tables and line breaks ('<br/>').
+    - If 'category' is specified as 'Egg Move', it identifies the end of relevant data by checking for the presence of an 'img' tag
+      and processes the table accordingly.
+    - The function 'egg_move_last_line' is a helper function used internally to determine where relevant data ends in the table,
+      based on specific criteria related to 'Egg Move' category.
+
+    Example Usage:
+    >>> html = BeautifulSoup(html_content, 'html.parser')
+    >>> result = list_composition(html, category='Egg Move')
+    >>> print(result)
+    [Tag1, Tag2, NavigableString1, ...]
     """
     def egg_move_last_line(scrap:list[Tag | NavigableString]=None):
         """
-        Determines the last relevant line in the table based on the presence of an 'img' tag.
+        Determines the index of the last relevant line in the table based on the presence of an 'img' tag.
 
-        Parameters:
-        - scrap (list[Tag | NavigableString]): The list of BeautifulSoup Tag objects and NavigableStrings
-          representing the table.
+        Args:
+        - scrap (list[Union[Tag, NavigableString]]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
+          It should contain the content extracted from the HTML table.
 
         Returns:
-        - int: The index of the last relevant line in the table.
+        - int: The index of the last relevant line in the table. If no relevant line is found or 'scrap' is empty,
+          it returns -1.
+
+        Details:
+        - This function iterates through the 'scrap' list to find the last line that contains relevant data, identified
+          by the presence of an 'img' tag. It helps determine the endpoint of content extraction for specific categories
+          like 'Egg Move'.
+        - The function assumes 'scrap' contains content from an HTML table, where relevant lines are separated by a fixed
+          number of elements (typically 9 elements per line).
+
+        Example Usage:
+        >>> scrap = [Tag1, NavigableString1, Tag2, ...]
+        >>> last_line_index = egg_move_last_line(scrap)
+        >>> print(last_line_index)
         """
         lines = [list(range(i,i+8)) for i in range(0,len(scrap),9)]
 
