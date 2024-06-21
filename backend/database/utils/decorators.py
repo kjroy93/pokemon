@@ -118,7 +118,7 @@ def line_elements(index:int=None,
         - Index 9: ['Alolan', 'Galarian', 'Hisuian', 'Paldean']
     """
     if category in ['TM','TR','HM','Technical Machine','Technical Record',
-                    'Hidden Machine','Level Up','Pre_evolution','Egg Move'] and index not in [8,9]:
+            'Hidden Machine','Level Up','Pre_evolution','Egg Move','Move Tutor'] and index not in [8,9]:
         word = ['Physical', 'Special', 'Other']
         return word
 
@@ -172,9 +172,9 @@ def check_form_category():
     def decorator(func:Callable):
         @wraps(func)
         def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None,
-            category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move',
-                'Technical Machine', 'Technical Record', 'Hidden Machine', 
-                'Level Up', 'Pre_evolution', 'Egg Move']=None, *args, **kwargs) -> str | bool:
+            category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
+                'Technical Record', 'Hidden Machine', 'Level Up', 
+                'Pre_evolution', 'Egg Move', 'Move Tutor']=None, *args, **kwargs) -> str | bool:
             
             key_word = line_elements(location_index,category)
 
@@ -314,9 +314,9 @@ def catt_form_logic():
         @wraps(func)
         def wrapper(index:int=None, catt_form:str=None,
                     category:Literal[
-                        'TM','TR','HM','Z Move','Max Move',
-                        'Technical Machine', 'Technical Record', 'Hidden Machine',
-                        'Level Up', 'Pre_evolution', 'Egg Move']=None,
+                        'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
+                        'Technical Record', 'Hidden Machine', 'Level Up',
+                        'Pre_evolution', 'Egg Move', 'Move Tutor']=None,
                     line:list[Tag | NavigableString]=None, *args, **kwargs):
             """
             Processes the category form logic for a line element.

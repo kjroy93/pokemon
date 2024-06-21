@@ -486,7 +486,7 @@ def move_tutor():
 
 def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
     category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record',
-                     'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move']=None,
+        'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move', 'Move Tutor']=None,
     regional_form:bool=None) -> Literal[8, 9, 10, 11]:
     
     """
@@ -516,6 +516,8 @@ def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
             length = 10
         elif category == 'Max Move':
             length = 11
+        elif category == 'Move Tutor':
+            length = 7
         else:
             length = 9
         
@@ -532,12 +534,15 @@ def list_lenght(numerator:int, scrap:list[Tag | NavigableString]=None,
             length = functions.regional_z_max(numerator, scrap)
         case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
             length = functions.regional_case(numerator, scrap)
+        case 'Move Tutor':
+            length = 10
     
     return length
 
 def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
     category:Literal['TM','TR','HM','Z Move','Max Move',
-        'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 'Pre_evolution']=None,
+        'Technical Machine', 'Technical Record', 'Hidden Machine',
+        'Level Up', 'Pre_evolution', 'Move Tutor']=None,
     regional_form:bool=None):
     
     """
@@ -587,7 +592,6 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
         
         case 'Egg Move':
             line = egg_move_fix(start_index,items_in_list,scrap,regional_form)
-            print(start_index)
             return [line] + make_it_table(start_index + items_in_list,scrap,category,regional_form)
         
         case 'Pre_evolution':
@@ -598,3 +602,6 @@ def make_it_table(start_index:int=0, scrap:list[Tag | NavigableString]=None,
         case 'TM' | 'Technical Machine' | 'TR' | 'Technical Record' | 'HM' | 'Hidden Machine':
             line = tm_tr_move_fix(start_index,items_in_list,scrap,category)
             return [line] + make_it_table(start_index + items_in_list,scrap,category,regional_form)
+        
+        case 'Move Tutor':
+            pass
