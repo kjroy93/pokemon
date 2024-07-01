@@ -19,9 +19,20 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
     if 0 <= location_index < line_length:
         element = line[location_index]
         if isinstance(element, Tag):
-
-            return word in element.get('alt', '')
-        
+            try:
+                if word in element.get('alt',''):
+                    return True
+                if word.lower() in element.get('img',''):
+                    return True
+                if word.lower() in element.get('src',''):
+                    return True
+                if word.lower() in element.find('img').get('src'):
+                    return True
+                if word.lower() not in element.find('img').get('src') and location_index == 7:
+                    return True
+            except AttributeError:
+                pass
+            
     return False
 
 def check_word_in_line(func:Callable):
@@ -49,7 +60,10 @@ def check_word_in_line(func:Callable):
           - str or None: The word processed by the decorated function.
           - bool: True if the word is found and the decorated function executed successfully, False otherwise.
         """
-        if word_in_line(word,line,location_index):
+        if word_in_line(word,line,location_index) and location_index == 7:
+            word = 'Normal'
+            return func(word,location_index,*args,**kwargs)
+        elif word_in_line(word,line,location_index):
             return func(word,location_index,*args,**kwargs)
         
         return None, False
@@ -90,11 +104,25 @@ def form_revision(word:str=None, location_index:int=None):
         else:
             return word, True
     
+    if word in ['-a', '-g', '-h', '-p']:
+        for letter in ['-a', '-g', '-h', '-p']:
+            match letter:
+                case '-a':
+                    word = 'Alolan'
+                case '-g':
+                    word = 'Galarian'
+                case '-h':
+                    word = 'Hisuian'
+                case '-p':
+                    word = 'Paldean'
+            break
+    
     return word, True
 
 def line_elements(index:int=None,
-    category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record',
-    'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move']=None):
+    category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
+        'Technical Record', 'Hidden Machine', 'Level Up',
+        'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None, pokemon_name:str=None):
     """
     Determines the valid words for a line element based on the index and category.
 
@@ -117,9 +145,9 @@ def line_elements(index:int=None,
         - Index 8: ['Normal', 'Alolan', 'Galarian', 'Hisuian', 'Paldean']
         - Index 9: ['Alolan', 'Galarian', 'Hisuian', 'Paldean']
     """
-    if category in ['TM','TR','HM','Technical Machine','Technical Record',
-            'Hidden Machine','Level Up','Pre_evolution','Egg Move','Move Tutor'] and index not in [8,9]:
-        word = ['Physical', 'Special', 'Other']
+    if category not in ['Max Move', 'Z Move', 'Pre evolution'] and index not in [8,9]:
+        word = ['Physical', 'Special', 'Other', pokemon_name]
+        
         return word
 
     match index:
@@ -127,10 +155,10 @@ def line_elements(index:int=None,
             word = ['Physical', 'Other']
         case 3:
             word = ['Special']
-        case 8:
-            word = ['Normal', 'Alolan', 'Galarian', 'Hisuian', 'Paldean']
+        case 7 | 8:
+            word = ['Normal', 'Alola', 'Alolan', '-a', 'Galar', 'Galarian', '-g', 'Hisui', 'Hisuian', '-h', 'Paldea', 'Paldean', '-p']
         case 9:
-            word = ['Alolan', 'Galarian', 'Hisuian', 'Paldean']
+            word = ['Alola', 'Alolan', '-a', 'Galar', 'Galarian', '-g', 'Hisui', 'Hisuian', '-h', 'Paldea', 'Paldean', '-p']
     
     return word
 
@@ -174,9 +202,10 @@ def check_form_category():
         def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None,
             category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
                 'Technical Record', 'Hidden Machine', 'Level Up', 
-                'Pre_evolution', 'Egg Move', 'Move Tutor']=None, *args, **kwargs) -> str | bool:
+                'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+            pokemon_name:str=None, *args, **kwargs) -> str | bool:
             
-            key_word = line_elements(location_index,category)
+            key_word = line_elements(location_index,category,pokemon_name)
 
             if isinstance(key_word,list):
                 for word in key_word:
@@ -187,7 +216,7 @@ def check_form_category():
             else:
                 return 'N/A'
         
-            if isinstance(result,str) and result not in ['N/A', 'Physical', 'Special', 'Other']:
+            if isinstance(result,str) and result not in [pokemon_name, 'N/A', 'Physical', 'Special', 'Other']:
                 result = result + '_form'
             
             return func(flag,result,*args,**kwargs)
@@ -196,7 +225,7 @@ def check_form_category():
     
     return decorator
 
-def solve_img_issue(regional:bool=None):
+def solve_img_issue(regional:bool=None) -> list[Tag | NavigableString]:
     """
     Decorator that processes and fixes image issues for regional forms in HTML content.
 
@@ -263,8 +292,7 @@ def solve_img_issue(regional:bool=None):
                 return result
             
             elif not regional:
-                img_tag = soup.find('img')
-                result = func(tag=img_tag,line=line,*args,**kwargs)
+                result = func(line,string,*args,**kwargs)
 
                 return result
         
@@ -288,7 +316,7 @@ def catt_form_logic():
     - wrapper(index:int=None, catt_form:str=None, category:Literal[
                 'TM', 'TR', 'HM', 'Z Move', 'Max Move',
                 'Technical Machine', 'Technical Record', 'Hidden Machine', 
-                'Level Up', 'Pre_evolution', 'Egg Move']=None, 
+                'Level Up', 'Pre_evolution', 'Egg Move', Move Tutor]=None, 
               line:list[Tag | NavigableString]=None, *args, **kwargs):
         The function that processes the category form logic.
 
@@ -311,13 +339,24 @@ def catt_form_logic():
         process_category_form(index=3, catt_form='Physical', category='TM', line=line)
     """
     def decorator(func:Callable):
+        """
+        Processes the category form logic for a line element.
+
+        Parameters:
+        - index (int, optional): The index in the line to check.
+        - catt_form (str, optional): The form category to be processed.
+        - category (Literal, optional): The category to evaluate.
+        - line (list[Tag | NavigableString], optional): A list of BeautifulSoup Tag objects and NavigableStrings.
+
+        Returns:
+        - The result of the decorated function after processing the category form logic.
+        """
         @wraps(func)
         def wrapper(index:int=None, catt_form:str=None,
-                    category:Literal[
-                        'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
-                        'Technical Record', 'Hidden Machine', 'Level Up',
-                        'Pre_evolution', 'Egg Move', 'Move Tutor']=None,
-                    line:list[Tag | NavigableString]=None, *args, **kwargs):
+            category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
+                'Technical Record', 'Hidden Machine', 'Level Up',
+                'Pre_evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+            line:list[Tag | NavigableString]=None, pokemon_name:str=None, *args, **kwargs) -> list[Tag | NavigableString]:
             """
             Processes the category form logic for a line element.
 
@@ -338,11 +377,15 @@ def catt_form_logic():
                     9: ['Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']
                 }
             else:
+                if category == 'Move Tutor' and index == 8:
+                    index += 1
+
                 contact_form = {
                     2: ['Physical', 'Special', 'Other'],
                     3: ['Physical', 'Special', 'Other'],
+                    7: [pokemon_name, 'Normal_form'],
                     8: ['Normal_form'],
-                    9: ['Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']
+                    9: ['Alola_form', 'Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']
                 }
 
             if index not in contact_form:

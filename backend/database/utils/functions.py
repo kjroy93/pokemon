@@ -146,6 +146,13 @@ def regional_z_max(numerator:int, scrap:list[Tag]):
             ) and hasattr(scrap[numerator+8], 'get') else 9
         ) if len(scrap) - numerator > 9 else 8
 
+def pre_evolution_case(numerator:int, scrap:list[Tag]):
+    last_element = 12
+    if hasattr(scrap[numerator+9],'get'):
+        return last_element if numerator == 0 or isinstance(scrap[numerator+9].get('alt',''),str) else 10
+    else:
+        return 10
+
 def elements_atk(a_tag:Tag, control:int=None):
     """
     Extracts the attacking move type from an <img> tag's 'src' attribute based on control settings.
