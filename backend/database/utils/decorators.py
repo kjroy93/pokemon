@@ -22,11 +22,11 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
         element = line[location_index]
         if isinstance(element, Tag):
             try:
-                if word in element.get('alt',''):
+                if word in element.get('alt'):
                     return True
-                if word.lower() in element.get('img',''):
+                if word.lower() in element.get('img'):
                     return True
-                if word.lower() in element.get('src',''):
+                if word.lower() in element.get('src'):
                     return True
                 if word.lower() in element.find('img').get('src'):
                     return True
@@ -286,7 +286,7 @@ def solve_img_issue(regional:bool=None) -> list[Tag | NavigableString]:
                 img_tag = soup.find_all('img')
                 if img_tag:
                     forms = [img.get('alt') for img in img_tag]
-                    
+
                     second_form = forms[1].split()
                     form = second_form[0] + '_' + second_form[1]
                     del forms [1]
