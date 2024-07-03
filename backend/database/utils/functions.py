@@ -1,4 +1,5 @@
 # Dependencies
+from typing import Literal
 from bs4 import Tag, ResultSet, NavigableString
 
 def number_generator(init:int):
@@ -97,7 +98,10 @@ def normal_regional(pokemon_ability:dict | list):
     elif isinstance(pokemon_ability,list):
         return False
 
-def regional_case(numerator:int, scrap:list[Tag]):
+def regional_case(numerator:int, scrap:list[Tag],
+        category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
+            'Technical Record', 'Hidden Machine', 'Level Up', 
+            'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
     """
     Determines the index of the last relevant element for regional cases in a list of BeautifulSoup Tag objects.
 
@@ -112,11 +116,13 @@ def regional_case(numerator:int, scrap:list[Tag]):
     Returns:
     - int: The index of the last relevant element based on the conditions.
     """
-    last_element = 11
-    if hasattr(scrap[numerator+9],'get'):
-        return last_element if numerator == 0 or isinstance(scrap[numerator+9].get('alt',''),str) else 10
+    loc = 9
+
+    last_element = 11 if category != 'Pre evolution' else 12
+    if hasattr(scrap[numerator+loc],'get'):
+        return last_element if numerator == 0 or isinstance(scrap[numerator+loc].get('alt',''),str) else 10
     else:
-        return last_element - 1
+        return last_element - 1 if category != 'Pre evolution' else last_element - 2
 
 def regional_z_max(numerator:int, scrap:list[Tag]):
     """
@@ -145,13 +151,6 @@ def regional_z_max(numerator:int, scrap:list[Tag]):
                 )
             ) and hasattr(scrap[numerator+8], 'get') else 9
         ) if len(scrap) - numerator > 9 else 8
-
-def pre_evolution_case(numerator:int, scrap:list[Tag]):
-    last_element = 12
-    if hasattr(scrap[numerator+9],'get'):
-        return last_element if numerator == 0 or isinstance(scrap[numerator+9].get('alt',''),str) else 10
-    else:
-        return 10
 
 def elements_atk(a_tag:Tag, control:int=None):
     """
@@ -250,9 +249,24 @@ def list_of_elements(location:ResultSet[Tag]):
     
     return types
 
-def search_text(main_table:list[Tag], text:str):
-    for table in main_table:
-        if table[0].text == text:
-            return table
-        else:
-            pass
+def get_dict(pokemon_name:str=None,
+        category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move',
+            'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 
+            'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
+    if category in ['Max Move','Z Move']:
+        contact_form = {
+            2: ['Physical', 'Other'],
+            3: ['Special'],
+            8: ['Normal_form'],
+            9: ['Alola_form', 'Alolan_form', 'Galar_form', 'Galarian_form', 'Hisui_form', 'Hisuian_form', 'paldea_form', 'Paldean_form']
+        }
+    else:
+        contact_form = {
+            2: ['Physical', 'Special', 'Other'],
+            3: ['Physical', 'Special', 'Other'],
+            7: [pokemon_name, 'Normal_form'],
+            8: ['Normal_form'],
+            9: ['Alola_form', 'Alolan_form', 'Galar_form', 'Galarian_form', 'Hisui_form', 'Hisuian_form', 'paldea_form', 'Paldean_form']
+        }
+    
+    return contact_form

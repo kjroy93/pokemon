@@ -3,6 +3,8 @@ from functools import wraps
 from bs4 import BeautifulSoup, Tag, NavigableString
 from typing import Callable, Literal
 
+from backend.database.utils.functions import get_dict
+
 def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_index:int=None) -> bool:
     """
     Checks if a word is present in the 'alt' attribute of a Tag element at a specific index in the line.
@@ -27,8 +29,6 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
                 if word.lower() in element.get('src',''):
                     return True
                 if word.lower() in element.find('img').get('src'):
-                    return True
-                if word.lower() not in element.find('img').get('src') and location_index == 7:
                     return True
             except AttributeError:
                 pass
@@ -60,10 +60,7 @@ def check_word_in_line(func:Callable):
           - str or None: The word processed by the decorated function.
           - bool: True if the word is found and the decorated function executed successfully, False otherwise.
         """
-        if word_in_line(word,line,location_index) and location_index == 7:
-            word = 'Normal'
-            return func(word,location_index,*args,**kwargs)
-        elif word_in_line(word,line,location_index):
+        if word_in_line(word,line,location_index):
             return func(word,location_index,*args,**kwargs)
         
         return None, False
@@ -108,13 +105,13 @@ def form_revision(word:str=None, location_index:int=None):
         for letter in ['-a', '-g', '-h', '-p']:
             match letter:
                 case '-a':
-                    word = 'Alolan'
+                    word = 'Alola'
                 case '-g':
-                    word = 'Galarian'
+                    word = 'Galar'
                 case '-h':
-                    word = 'Hisuian'
+                    word = 'Hisui'
                 case '-p':
-                    word = 'Paldean'
+                    word = 'Paldea'
             break
     
     return word, True
@@ -145,7 +142,7 @@ def line_elements(index:int=None,
         - Index 8: ['Normal', 'Alolan', 'Galarian', 'Hisuian', 'Paldean']
         - Index 9: ['Alolan', 'Galarian', 'Hisuian', 'Paldean']
     """
-    if category not in ['Max Move', 'Z Move', 'Pre evolution'] and index not in [8,9]:
+    if category not in ['Max Move', 'Z Move'] and index not in [7,8,9]:
         word = ['Physical', 'Special', 'Other', pokemon_name]
         
         return word
@@ -156,9 +153,9 @@ def line_elements(index:int=None,
         case 3:
             word = ['Special']
         case 7 | 8:
-            word = ['Normal', 'Alola', 'Alolan', '-a', 'Galar', 'Galarian', '-g', 'Hisui', 'Hisuian', '-h', 'Paldea', 'Paldean', '-p']
+            word = ['Normal', 'Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p', pokemon_name]
         case 9:
-            word = ['Alola', 'Alolan', '-a', 'Galar', 'Galarian', '-g', 'Hisui', 'Hisuian', '-h', 'Paldea', 'Paldean', '-p']
+            word = ['Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p']
     
     return word
 
@@ -205,13 +202,18 @@ def check_form_category():
                 'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
             pokemon_name:str=None, *args, **kwargs) -> str | bool:
             
-            key_word = line_elements(location_index,category,pokemon_name)
+            key_words = line_elements(location_index,category,pokemon_name)
 
-            if isinstance(key_word,list):
-                for word in key_word:
+            if isinstance(key_words,list):
+                for word in key_words:
                     result, flag = form_revision(word, line, location_index)
                     if flag:
                         break
+                
+                if location_index == 7 and result is None:
+                    if 'Normal' not in line[location_index].find('img').get('src'):
+                        result = 'Normal'
+                        flag = True
 
             else:
                 return 'N/A'
@@ -284,6 +286,12 @@ def solve_img_issue(regional:bool=None) -> list[Tag | NavigableString]:
                 img_tag = soup.find_all('img')
                 if img_tag:
                     forms = [img.get('alt') for img in img_tag]
+                    
+                    second_form = forms[1].split()
+                    form = second_form[0] + '_' + second_form[1]
+                    del forms [1]
+                    forms.append(form)
+
                     line[data_location] = forms[0]
                     line.insert(8,forms[1])
 
@@ -352,10 +360,10 @@ def catt_form_logic():
         - The result of the decorated function after processing the category form logic.
         """
         @wraps(func)
-        def wrapper(index:int=None, catt_form:str=None,
+        def wrapper(location_index:int=None, catt_form:str=None,
             category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
                 'Technical Record', 'Hidden Machine', 'Level Up',
-                'Pre_evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+                'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
             line:list[Tag | NavigableString]=None, pokemon_name:str=None, *args, **kwargs) -> list[Tag | NavigableString]:
             """
             Processes the category form logic for a line element.
@@ -369,34 +377,19 @@ def catt_form_logic():
             Returns:
             - The result of the decorated function after processing the category form logic.
             """
-            if category in ['Max Move','Z Move']:
-                contact_form = {
-                    2: ['Physical', 'Other'],
-                    3: ['Special'],
-                    8: ['Normal_form'],
-                    9: ['Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']
-                }
-            else:
-                if category == 'Move Tutor' and index == 8:
-                    index += 1
+            answer = None
+            
+            catt_dict = get_dict(pokemon_name,category)
 
-                contact_form = {
-                    2: ['Physical', 'Special', 'Other'],
-                    3: ['Physical', 'Special', 'Other'],
-                    7: [pokemon_name, 'Normal_form'],
-                    8: ['Normal_form'],
-                    9: ['Alola_form', 'Alolan_form', 'Galarian_form', 'Hisuian_form', 'Paldean_form']
-                }
-
-            if index not in contact_form:
-                answer = 'N/A'
-
-            if any(word == catt_form for word in contact_form[index]):
-                answer = True
-            else:
+            if location_index not in catt_dict.keys():
                 answer = 'N/A'
             
-            result = func(answer,line,index,catt_form,*args,**kwargs)
+            for i in catt_dict.keys():
+                if any(word == catt_form for word in catt_dict[i]):
+                    answer = True
+                    break
+
+            result = func(answer,line,location_index,catt_form,*args,**kwargs)
 
             return result
         
