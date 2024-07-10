@@ -16,14 +16,8 @@ foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
 x.name()
 x.elements()
 
-# Max Moves and Z Moves data scrap from Serebii.net, for pokemon with regional forms
-scrap = parse_movements.list_composition(html=foo_info[17])
-positions, group = parse_movements.obtain_positions(scrap)
-main_table = parse_movements.define_table(group,positions,scrap)
-regional = functions.normal_regional(x.p_elements)
-df = parse_movements.make_it_table(scrap=main_table,category='Max Move',regional_form=regional)
-
-print(pd.DataFrame(df))
+movedex = Moveset(x)
+movedex.locations()
 
 try:
     m = Mega_Pokemon(x)

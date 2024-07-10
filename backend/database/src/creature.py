@@ -78,7 +78,7 @@ class Pokemon():
         self.elemental_types = functions.list_of_elements(location)
         self._bases = []
 
-    def _basic_tables(self, type_of_table:Literal['fooinfo','footype','bases','elements','moveset']) -> ResultSet:
+    def _basic_tables(self, type_of_table:Literal['fooinfo','footype','bases','elements','moveset']) -> ResultSet[Tag]:
         """
         Method that specifies the classes to searcth in the HTML.text soup.\n
         ¡WARNING! In case of 'elements', 'bases' and 'moveset', please, specify it in the parameter.

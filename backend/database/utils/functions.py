@@ -34,6 +34,23 @@ def remove_string(data:list[str]):
 
     return data
 
+def modify_table(table:list[list], catt_atks:list):
+    """
+    Modifies the attack form information in the provided table.
+
+    Args:
+    - table (list[list]): The table representing moves data to modify.
+    - catt_atks (list): A list containing attack form information corresponding to each move in the table.
+
+    Modifies the attack form information in each move entry of the table based on `catt_atks`.
+
+    Example:
+    modify_table(moves_table, catt_form_data)
+    # This example modifies the attack form information in `moves_table` based on `catt_form_data`.
+    """
+    for index, move in enumerate(table):
+        move[2] = catt_atks[index]
+
 def make_dict(elemental:list, v:list):
     """
     Creates a dictionary from two lists `elemental` and `v`.

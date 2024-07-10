@@ -22,13 +22,13 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
         element = line[location_index]
         if isinstance(element, Tag):
             try:
-                if word in element.get('alt'):
+                if word in element.get('alt',''):
                     return True
-                if word.lower() in element.get('img'):
+                if word.lower() in element.get('img',''):
                     return True
-                if word.lower() in element.get('src'):
+                if word.lower() in element.get('src',''):
                     return True
-                if word.lower() in element.find('img').get('src'):
+                if word.lower() in element.find('img').get('src',''):
                     return True
             except AttributeError:
                 pass

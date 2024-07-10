@@ -1,11 +1,11 @@
 # Special Functions in order for main class to be more readable
 import re
 from typing import Literal
-from bs4 import Tag, ResultSet, NavigableString
+from bs4 import Tag, ResultSet
 
 from backend.database.utils import functions
 
-def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, search:Literal['form','moveset']=None) -> ResultSet:
+def find_table_by_class(gen:int, main_table:ResultSet[Tag], class_name:str=None, search:Literal['form','moveset']=None) -> Tag:
     """
     Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class:
 
@@ -21,10 +21,7 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, sear
     """
     match search:
         case None:
-            if gen < 8:
-                return main_table[0].find_all('td', {'class': class_name})
-            elif gen >= 8:
-                return main_table[1].find_all('td', {'class': class_name})
+            return main_table[0 if gen < 8 else 1].find_all('td', {'class': class_name})
             
         case 'form':
             if gen < 8:
@@ -33,13 +30,8 @@ def find_table_by_class(gen:int, main_table:ResultSet, class_name:str=None, sear
                 raise ValueError("Error: Parameter with no possible resolution, because Mega Evolutions are not available in 8th Generation and onward")
         
         case 'moveset':
-            if gen < 8:
-                table = main_table[0].find_all('table', {'class': 'dextable'})
-                return table
-            elif gen >= 8:
-                table = main_table[1].find_all('table', {'class': 'dextable'})
-                return table
-
+            return main_table[0 if gen < 8 else 1].find_all('table', {'class': 'dextable'})
+        
 def find_word(tag):
     text = tag.name == 'td' and 'Form' in tag.text
     text_1 = tag.name == 'td' and 'Standard' in tag.text
