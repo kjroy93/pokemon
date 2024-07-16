@@ -18,7 +18,7 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
     - bool: True if the word is found in the 'alt' attribute of the Tag at the specified index, False otherwise.
     """
     line_length = len(line)
-    if 0 <= location_index < line_length:
+    if 0 <= location_index < line_length and word is not None:
         element = line[location_index]
         if isinstance(element, Tag):
             try:
@@ -119,7 +119,7 @@ def form_revision(word:str=None, location_index:int=None):
 def line_elements(index:int=None,
     category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
         'Technical Record', 'Hidden Machine', 'Level Up',
-        'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None, pokemon_name:str=None):
+        'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None, pokemon_name:str=None):
     """
     Determines the valid words for a line element based on the index and category.
 
@@ -199,7 +199,7 @@ def check_form_category():
         def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None,
             category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
                 'Technical Record', 'Hidden Machine', 'Level Up', 
-                'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+                'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
             pokemon_name:str=None, *args, **kwargs) -> str | bool:
             
             key_words = line_elements(location_index,category,pokemon_name)
@@ -210,15 +210,18 @@ def check_form_category():
                     if flag:
                         break
                 
-                if location_index == 7 and result is None:
+                if location_index == 7 and result is None and pokemon_name != 'Raichu':
                     if 'Normal' not in line[location_index].find('img').get('src'):
                         result = 'Normal'
                         flag = True
+                elif location_index == 7 and pokemon_name == 'Raichu':
+                    result = line[location_index].find('img').get('alt')
+                    flag = True
 
             else:
                 return 'N/A'
         
-            if isinstance(result,str) and result not in [pokemon_name, 'N/A', 'Physical', 'Special', 'Other']:
+            if isinstance(result,str) and result not in [pokemon_name, 'N/A', 'Physical', 'Special', 'Other'] and 'Learn' not in result:
                 result = result + '_form'
             
             return func(flag,result,*args,**kwargs)
@@ -363,7 +366,7 @@ def catt_form_logic():
         def wrapper(location_index:int=None, catt_form:str=None,
             category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
                 'Technical Record', 'Hidden Machine', 'Level Up',
-                'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+                'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
             line:list[Tag | NavigableString]=None, pokemon_name:str=None, *args, **kwargs) -> list[Tag | NavigableString]:
             """
             Processes the category form logic for a line element.
@@ -388,6 +391,9 @@ def catt_form_logic():
                 if any(word == catt_form for word in catt_dict[i]):
                     answer = True
                     break
+            
+            if 'Learn' in catt_form:
+                answer = True
 
             result = func(answer,line,location_index,catt_form,*args,**kwargs)
 

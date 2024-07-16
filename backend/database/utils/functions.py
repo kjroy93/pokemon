@@ -4,7 +4,7 @@ from bs4 import Tag, ResultSet, NavigableString
 
 def number_generator(init:int):
     """
-    Generates a sequence of numbers starting from `init` up to 999.
+    Generates a sequence of numbers starting from `init` up to 1999.
 
     This generator function yields numbers sequentially starting from the specified initial number
     up to 1999. It continues generating numbers indefinitely until the upper limit is reached.
@@ -13,7 +13,7 @@ def number_generator(init:int):
     - init (int): The starting number for the generator.
 
     Yields:
-    - int: The next number in the sequence starting from `init` up to 999.
+    - int: The next number in the sequence starting from `init` up to 1999.
     """
     for number in range(init,2000):
         yield number
@@ -34,7 +34,7 @@ def remove_string(data:list[str]):
 
     return data
 
-def modify_table(table:list[list], catt_atks:list):
+def modify_table(table:list[list], catt_atks:list[str]):
     """
     Modifies the attack form information in the provided table.
 
@@ -49,7 +49,7 @@ def modify_table(table:list[list], catt_atks:list):
     # This example modifies the attack form information in `moves_table` based on `catt_form_data`.
     """
     for index, move in enumerate(table):
-        move[2] = catt_atks[index]
+        move[3] = catt_atks[index].lower()
 
 def make_dict(elemental:list, v:list):
     """
@@ -118,7 +118,7 @@ def normal_regional(pokemon_ability:dict | list):
 def regional_case(numerator:int, scrap:list[Tag],
         category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
             'Technical Record', 'Hidden Machine', 'Level Up', 
-            'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
+            'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
     """
     Determines the index of the last relevant element for regional cases in a list of BeautifulSoup Tag objects.
 
@@ -135,11 +135,11 @@ def regional_case(numerator:int, scrap:list[Tag],
     """
     loc = 9
 
-    last_element = 11 if category != 'Pre evolution' else 12
+    last_element = 11 if category != 'Pre-evolution' else 12
     if hasattr(scrap[numerator+loc],'get'):
         return last_element if numerator == 0 or isinstance(scrap[numerator+loc].get('alt',''),str) else 10
     else:
-        return last_element - 1 if category != 'Pre evolution' else last_element - 2
+        return last_element - 1 if category != 'Pre-evolution' else last_element - 2
 
 def regional_z_max(numerator:int, scrap:list[Tag]):
     """
@@ -211,7 +211,7 @@ def elements_atk(a_tag:Tag, control:int=None):
 
     minus = [elemental_type.lower() for elemental_type in elemental_types]
 
-    if control == None:
+    if not control:
         text = minus
     elif control == 1:
         text = category
@@ -223,7 +223,7 @@ def elements_atk(a_tag:Tag, control:int=None):
         if i in type_text:
             return str(text[n].capitalize())
 
-def list_of_elements(location:ResultSet[Tag]):
+def list_of_elements(location:ResultSet[Tag], gen:int):
     """
     Extracts a list of clean element types from a BeautifulSoup ResultSet of Tags.
 
@@ -234,6 +234,7 @@ def list_of_elements(location:ResultSet[Tag]):
 
     Parameters:
     - location (ResultSet[Tag]): The BeautifulSoup ResultSet containing Tag elements.
+    - gen (int): Indicates the generation of the game currently scraped.
 
     Returns:
     - list[str]: A list of clean element types extracted from the ResultSet after processing.
@@ -248,7 +249,10 @@ def list_of_elements(location:ResultSet[Tag]):
     >>> list_of_elements(result_set)  # Returns a list of cleaned element types
     """
     types = []
-    location = location[0:18]
+    if gen < 6:
+        location = location[0:17]
+    else:
+        location = location[0:18]
 
     for tag in location:
         a_tag = tag.find('img')
@@ -269,8 +273,27 @@ def list_of_elements(location:ResultSet[Tag]):
 def get_dict(pokemon_name:str=None,
         category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move',
             'Technical Machine', 'Technical Record', 'Hidden Machine', 'Level Up', 
-            'Pre evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
+            'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None):
+    """
+    Returns a dictionary mapping integers to lists of strings based on the category of moves.
+
+    This function generates a dictionary that categorizes moves into different forms based on the
+    provided category and optionally the Pokémon's name. The dictionary's keys represent different
+    move categories, and the values are lists of move types or forms associated with those categories.
+
+    Args:
+        pokemon_name (str, optional): The name of the Pokémon to include in the dictionary. Defaults to None.
+        category (Literal, optional): The category of moves to generate the dictionary for. Can be one of the following:
+            'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record', 
+            'Hidden Machine', 'Level Up', 'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move'. 
+            Defaults to None.
+
+    Returns:
+        dict[int, list[str]]: A dictionary where keys are integers representing move categories, 
+        and values are lists of strings representing move types or forms.
+    """
     if category in ['Max Move','Z Move']:
+
         contact_form = {
             2: ['Physical', 'Other'],
             3: ['Special'],
@@ -287,3 +310,6 @@ def get_dict(pokemon_name:str=None,
         }
     
     return contact_form
+
+def obtain_tuple(keyword:str=None, structure:dict[str | tuple, list[str,int]]=None):
+    return next((clave for clave in structure if isinstance(clave,tuple) and keyword in clave))

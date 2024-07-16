@@ -8,16 +8,19 @@ from backend.database.src.moveset import Moveset
 from backend.database.parsers import parse_movements
 
 # Class test
-x = Pokemon(8,'raichu')
+x = Pokemon(6,6)
 
 all_divs = x.soup.find_all('div', attrs={'align': 'center'})
-foo_info = all_divs[1].find_all('table', {'class': 'dextable'})
+foo_info = all_divs[0].find_all('table', {'class': 'dextable'})
 
 x.name()
 x.elements()
 
-movedex = Moveset(x)
-movedex.locations()
+moveset = Moveset(x)
+moveset.get_locations()
+scrap = parse_movements.list_composition(content=foo_info[moveset._map['Level Up'][1]])
+moveset.obtain_moves(information='Level Up',scrap=scrap,regional=True)
+print(moveset.lv)
 
 try:
     m = Mega_Pokemon(x)

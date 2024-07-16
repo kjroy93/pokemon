@@ -75,7 +75,7 @@ class Pokemon():
         self.p_number = '#{}'.format(str(number_name).zfill(3))
         self.gen = gen
         location = self._basic_tables('footype')
-        self.elemental_types = functions.list_of_elements(location)
+        self.elemental_types = functions.list_of_elements(location, gen)
         self._bases = []
 
     def _basic_tables(self, type_of_table:Literal['fooinfo','footype','bases','elements','moveset']) -> ResultSet[Tag]:
@@ -101,7 +101,7 @@ class Pokemon():
                 return all_divs
             
             case 'elements':
-                return parse.find_table_by_class(self.gen,all_divs,class_name='cen')
+                return parse.find_table_by_class(self.gen,all_divs,class_name='cen' if self.gen > 5 else 'center')
             
             case 'moveset':
                 return parse.find_table_by_class(self.gen,all_divs,search=type_of_table)
