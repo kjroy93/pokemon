@@ -17,7 +17,7 @@ import numpy as np
 
 # Libraries made for this proyect
 from backend.database.utils.functions import number_generator, elements_atk, regional_case, regional_z_max, obtain_tuple
-from backend.database.parsers.parse_movements import level_up_moves, max_z_table_segment, egg_move_fix, tm_tr_move_fix, move_tutor, special_moves, pre_evolution_moves, transfer_moves
+from backend.database.parsers.parse_movements import level_up_moves, egg_move_fix, tm_tr_move_fix, move_tutor, special_moves, pre_evolution_moves, transfer_moves
 from backend.database.src.creature import Pokemon
 
 class Moveset:
@@ -80,13 +80,13 @@ class Moveset:
         self.pokemon = pokemon
 
         # Define categories and corresponding attribute names for movesets
-        regional_forms = ('Alola', 'Alolan', 'Galar', 'Galarian', 'Hisui', 'Hisuian', 'Paldea', 'Paldean')
+        self.regional_forms = ('Alola', 'Alolan', 'Galar', 'Galarian', 'Hisui', 'Hisuian', 'Paldea', 'Paldean')
         tm_hm = ('TM', 'Technical Machine', 'HM', 'Hidden Machine')
         tr = ('TR', 'Technical Record')
         
         # Map categories to attribute names used for storage
         self._map = {
-            'Level Up': ['lv'], regional_forms: ['lv_form'], tm_hm: ['tm_hm'], tr: ['tr'],
+            'Level Up': ['lv'], self.regional_forms: ['lv_form'], tm_hm: ['tm_hm'], tr: ['tr'],
             'Egg Moves': ['egg_moves'], 'Move Tutor': ['mt'], 'BDSP Move Tutor': ['bdsp_tutor'],
             'BDSP Technical Machine': ['bdsp_tm_hm'], 'Z Moves': ['z_moves'], 'Transfer': ['transfer'],
             'Max Moves': ['dynamax'], 'Pre-Evolution': ['pre_evolution'], 'Special': ['special_movs']
@@ -113,12 +113,12 @@ class Moveset:
             self.bdsp_tm_hm = []
             self.bdsp_tutor = []
     
-    def __map_population(self, html_section: Tag = None, html_location_info: int = None):
+    def __map_population(self, html_section: list[Tag] = None, html_location_info: int = None):
         """
         Maps and stores location information for specific keywords within an HTML section.
 
         Args:
-        - html_section (Tag, optional): The BeautifulSoup Tag object representing the HTML section to process.
+        - html_section (list[Tag], optional): The list of BeautifulSoup Tag objects representing the HTML section to process.
         - html_location_info (int, optional): The index or location information associated with the HTML section.
 
         Returns:
@@ -138,13 +138,22 @@ class Moveset:
         """
         for keyword, parser in self._map.items():
             # Check if parser has not yet been populated
-            if len(parser) != 2:
+            if len(parser) != 2 or keyword in ['Move Tutor', 'Z Moves', 'Level Up']:
                 try:
+                    match keyword:
+                        case 'Move Tutor' | 'Level Up' | 'Z Moves':
+                            if len(parser) < 3 and keyword in html_section[0].text and keyword not in ['Alola', 'Alolan', 'Galar', 'Galarian', 'Hisui', 'Hisuian', 'Paldea', 'Paldean']:
+                                # Append location information based on keyword type
+                                parser.append(html_location_info)
+                                break # Stop further iteration once a match is found
+                            else:
+                                continue # Continue to the next iteration if the lenght of the list is more than 3
+                        case _:
                     # Check if keyword is found in the text content of the first element of html_section
-                    if (isinstance(keyword, tuple) and any(key in html_section[0].text for key in keyword)) or (isinstance(keyword, str) and keyword in html_section[0].text):
-                        # Append location information based on keyword type
-                        parser.append(html_location_info + 1 if keyword == 'Transfer' else html_location_info)
-                        break  # Stop further iteration once a match is found
+                            if (isinstance(keyword, tuple) and any(key in html_section[0].text for key in keyword)) or (isinstance(keyword, str) and keyword in html_section[0].text):
+                                # Append location information based on keyword type
+                                parser.append(html_location_info + 1 if keyword == 'Transfer' and self.pokemon.gen == 8 else html_location_info)
+                                break  # Stop further iteration once a match is found
                 except TypeError:
                     continue  # Continue to the next iteration if html_section[0] is not accessible
 
@@ -200,7 +209,7 @@ class Moveset:
         """
         f_x_map = {
             'Level Up': level_up_moves,
-            'Max Move': max_z_table_segment,
+            'Max Move': 1,
             'Egg Move': egg_move_fix,
             ('TM', 'Technical Machine', 'TR',
             'Technical Record', 'HM', 'Hidden Machine'): tm_tr_move_fix,

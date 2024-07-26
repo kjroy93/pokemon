@@ -1,6 +1,16 @@
 # Dependencies
-from typing import Literal
+from typing import Literal, Callable
 from bs4 import Tag, ResultSet, NavigableString
+
+def apply_functions(functions:list[Callable], *args, **kwargs):
+    for n,f in enumerate(functions):
+        match n:
+            case 0:
+                answer = f(*args, **kwargs)
+            case 1:
+                line = f(catt_form=answer, *args, **kwargs)
+    
+    return line
 
 def number_generator(init:int):
     """
@@ -28,7 +38,7 @@ def remove_string(data:list[str]):
     Returns:
     - list[str]: The list with specified substrings removed from each element.
     """
-    words = 'Attacking Move Type: ','-type'
+    words = 'Attacking Move Type: ','-type','Learn as'
     for string in words:
         data = list(map(lambda x: x.replace(string,''),data))
 
@@ -50,6 +60,11 @@ def modify_table(table:list[list], catt_atks:list[str]):
     """
     for index, move in enumerate(table):
         move[3] = catt_atks[index].lower()
+
+def modify_list(dimentions:list, value:int):
+    index = dimentions.index(value)
+    for i in range(index + 1, len(dimentions)):
+        dimentions[i] += 1
 
 def make_dict(elemental:list, v:list):
     """
@@ -297,7 +312,7 @@ def get_dict(pokemon_name:str=None,
         contact_form = {
             2: ['Physical', 'Other'],
             3: ['Special'],
-            8: ['Normal_form'],
+            8: [pokemon_name, 'Gigantamax', 'Normal_form'],
             9: ['Alola_form', 'Alolan_form', 'Galar_form', 'Galarian_form', 'Hisui_form', 'Hisuian_form', 'paldea_form', 'Paldean_form']
         }
     else:
@@ -313,3 +328,15 @@ def get_dict(pokemon_name:str=None,
 
 def obtain_tuple(keyword:str=None, structure:dict[str | tuple, list[str,int]]=None):
     return next((clave for clave in structure if isinstance(clave,tuple) and keyword in clave))
+
+def obtain_form_by_index(scrap=None, indexes:list[int]|int=None, func:list[Callable]=None, modificator:str=None, *args, **kwargs):
+    if isinstance(indexes,list):
+        for idx in indexes:
+            scrap = apply_functions([func[0],func[1]], line=scrap, location_index=idx, category='Max Move', modificator=modificator, *args, **kwargs)
+        
+        return scrap
+    
+    elif isinstance(indexes,int):
+        scrap = apply_functions([func[0],func[1]], line=scrap, location_index=indexes, category='Max Move', modificator=modificator, *args, **kwargs)
+
+        return scrap

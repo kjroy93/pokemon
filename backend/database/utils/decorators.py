@@ -35,7 +35,7 @@ def word_in_line(word:str=None, line:list[Tag | NavigableString]=None, location_
             
     return False
 
-def check_word_in_line(func:Callable):
+def check_word_in_line(func:Callable) -> tuple[None|str, Literal[False, True]]:
     """
     Decorator that checks if a word is present in the 'alt' attribute of a Tag element at a specific index in the line.
 
@@ -46,7 +46,7 @@ def check_word_in_line(func:Callable):
     - Callable: The wrapped function that includes the word checking logic.
     """
     @wraps(func)
-    def wrapper(word:str=None, line:list[Tag | NavigableString]=None, location_index:int=None, *args, **kwargs):
+    def wrapper(word:str=None, line:list[Tag | NavigableString]=None, location_index:int=None, *args, **kwargs) -> tuple[None|str, Literal[False, True]]:
         """
         Wrapper function that checks if a word is present in the 'alt' attribute of a Tag element at a specific index in the line.
 
@@ -116,10 +116,8 @@ def form_revision(word:str=None, location_index:int=None):
     
     return word, True
 
-def line_elements(index:int=None,
-    category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
-        'Technical Record', 'Hidden Machine', 'Level Up',
-        'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None, pokemon_name:str=None):
+def line_elements(index:int|list=None, pokemon_name:str=None, modificator:str=None,
+        regional:bool=None, gigamax:bool=None):
     """
     Determines the valid words for a line element based on the index and category.
 
@@ -142,22 +140,31 @@ def line_elements(index:int=None,
         - Index 8: ['Normal', 'Alolan', 'Galarian', 'Hisuian', 'Paldean']
         - Index 9: ['Alolan', 'Galarian', 'Hisuian', 'Paldean']
     """
-    if category not in ['Max Move', 'Z Move'] and index not in [7,8,9]:
-        word = ['Physical', 'Special', 'Other', pokemon_name]
-        
-        return word
+    if isinstance(index,int):
+        if modificator == 'catt' and index not in [7,8,9]:
+            word = ['Physical', 'Special', 'Other']
 
-    match index:
-        case 2:
-            word = ['Physical', 'Other']
-        case 3:
-            word = ['Special']
-        case 7 | 8:
-            word = ['Normal', 'Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p', pokemon_name]
-        case 9:
-            word = ['Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p']
-    
-    return word
+            return word
+        
+        if modificator == 'form':
+            if regional:
+                word = ['Normal', 'Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p', pokemon_name]
+
+                return word
+            
+            elif gigamax:
+                word = ['Gigantamax', pokemon_name]
+
+                return word
+            
+    else:
+        assert ValueError(f'(Index must be a integer, but {index} is {type(index)}. Please, check the inputs.)')
+
+def pre_evolution_case(result:str=None, pokemon_name:str=None):
+    if result in ['Alola', '-a', 'Galar', '-g', 'Hisui', '-h', 'Paldea', '-p']:
+        return 'Learn as ' + pokemon_name + '_' + result, True
+    else:
+        return 'Learn as ' + pokemon_name, True
 
 def check_form_category():
     """
@@ -197,12 +204,12 @@ def check_form_category():
     def decorator(func:Callable):
         @wraps(func)
         def wrapper(line:list[Tag | NavigableString]=None, location_index:int=None,
-            category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 
-                'Technical Record', 'Hidden Machine', 'Level Up', 
-                'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer Move']=None,
+            category:Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move',
+                'Technical Machine', 'Technical Record', 'Hidden Machine', 
+                'Level Up', 'Pre_evolution', 'Egg Move', 'Move Tutor']=None,
             pokemon_name:str=None, *args, **kwargs) -> str | bool:
             
-            key_words = line_elements(location_index,category,pokemon_name)
+            key_words = line_elements(location_index,pokemon_name,*args,**kwargs)
 
             if isinstance(key_words,list):
                 for word in key_words:
@@ -210,21 +217,16 @@ def check_form_category():
                     if flag:
                         break
                 
-                if location_index == 7 and result is None and pokemon_name != 'Raichu':
-                    if 'Normal' not in line[location_index].find('img').get('src'):
-                        result = 'Normal'
-                        flag = True
-                elif location_index == 7 and pokemon_name == 'Raichu':
-                    result = line[location_index].find('img').get('alt')
-                    flag = True
+                if category == 'Pre_evolution':
+                    result, flag = pre_evolution_case(result, pokemon_name)
 
             else:
                 return 'N/A'
         
-            if isinstance(result,str) and result not in [pokemon_name, 'N/A', 'Physical', 'Special', 'Other'] and 'Learn' not in result:
+            if isinstance(result,str) and result not in [pokemon_name, 'N/A', 'Physical', 'Special', 'Other', 'Gigantamax'] and 'Learn' not in result:
                 result = result + '_form'
             
-            return func(flag,result,*args,**kwargs)
+            return func(flag,result)
         
         return wrapper
     
@@ -383,9 +385,6 @@ def catt_form_logic():
             answer = None
             
             catt_dict = get_dict(pokemon_name,category)
-
-            if location_index not in catt_dict.keys():
-                answer = 'N/A'
             
             for i in catt_dict.keys():
                 if any(word == catt_form for word in catt_dict[i]):
@@ -395,7 +394,7 @@ def catt_form_logic():
             if 'Learn' in catt_form:
                 answer = True
 
-            result = func(answer,line,location_index,catt_form,*args,**kwargs)
+            result = func(answer,line,location_index,catt_form,pokemon_name=pokemon_name,*args,**kwargs)
 
             return result
         
