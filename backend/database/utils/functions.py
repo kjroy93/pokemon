@@ -19,11 +19,11 @@ def number_generator(init:int):
     This generator function yields numbers sequentially starting from the specified initial number
     up to 1999. It continues generating numbers indefinitely until the upper limit is reached.
 
-    Parameters:
-    - init (int): The starting number for the generator.
+    parameters:
+        - init (int): The starting number for the generator.
 
-    Yields:
-    - int: The next number in the sequence starting from `init` up to 1999.
+    yields:
+        - int: The next number in the sequence starting from `init` up to 1999.
     """
     for number in range(init,2000):
         yield number
@@ -49,8 +49,8 @@ def modify_table(table:list[list], catt_atks:list[str]):
     Modifies the attack form information in the provided table.
 
     Args:
-    - table (list[list]): The table representing moves data to modify.
-    - catt_atks (list): A list containing attack form information corresponding to each move in the table.
+        table (list[list]): The table representing moves data to modify.
+        catt_atks (list): A list containing attack form information corresponding to each move in the table.
 
     Modifies the attack form information in each move entry of the table based on `catt_atks`.
 

@@ -62,11 +62,11 @@ def attack_form_process(boolean:bool=None, key_word:str=None):
     Determines the attack form based on boolean logic.
 
     Parameters:
-    - boolean (bool, optional): Boolean flag indicating if the attack form is valid.
-    - key_word (str, optional): The key word representing the attack form.
+        - boolean (bool, optional): Boolean flag indicating if the attack form is valid.
+        - key_word (str, optional): The key word representing the attack form.
 
     Returns:
-    - str: The determined attack form or 'N/A' if not valid.
+        - str: The determined attack form or 'N/A' if not valid.
     """
     if boolean:
         return key_word

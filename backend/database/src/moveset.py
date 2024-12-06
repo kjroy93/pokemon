@@ -27,55 +27,52 @@ class Moveset:
     Upon initialization, this class initializes various attributes and maps for different categories of movesets,
     based on the Pokemon's generation and potential regional forms.
 
-    Attributes:
-    - pokemon (Pokemon): The Pokemon object for which the moveset information is being managed.
-    - _map (dict): A dictionary mapping categories of movesets to corresponding attribute names used for storage.
-    - table (BeautifulSoup object): HTML table containing moveset information fetched from the Pokemon's basic tables.
-    - lv (list): List to store Level Up moves.
-    - lv_form (list): List to store Level Up moves specific to regional forms.
-    - tm_hm (list): List to store TM and HM moves.
-    - tr (list): List to store TR moves.
-    - egg_moves (list): List to store Egg Moves.
-    - dynamax (list): List to store Max Moves (Dynamax moves).
-    - transfer (list): List to store Transfer moves.
-    - transfer_form (list): List to store Transfer moves specific to regional forms.
-    - z_moves (list): List to store Z Moves.
-    - mt (list): List to store Move Tutor moves.
-    - special_movs (list): List to store special moves specific to the Pokemon's generation.
-
     Methods:
-    - __init__(self, pokemon: Pokemon): Initializes the Moveset object with a Pokemon object,
-      initializes necessary attributes, and fetches moveset data from basic tables.
-    - __map_population(self, html_section: Tag = None, html_location_info: int = None): Maps and stores location
-      information for specific keywords within an HTML section.
-    - get_locations(self) -> dict[str | tuple, list[tuple[str, int]]]: Retrieves locations and their respective data
-      from an HTML table.
-    - __explore_maps(self, category: Literal[...] = None) -> Callable: Determines and returns the appropriate parsing
-      function based on the provided category.
-    - list_composition(self, location: int = None, category: Literal['Egg Move'] = None) -> list[Tag | NavigableString]:
-      Extracts and processes clean components from an HTML table.
-    - list_length(self, numerator: int, scrap: list[Tag | NavigableString] = None,
-                  category: Literal[...] = None, regional_form: bool = None) -> Literal[8, 9, 10, 11]:
-      Determines the number of elements required for a line in the main table based on given parameters.
-    - __assign_kwargs(self, category: Literal[...] = None, kwargs: dict = None,
-                      regional_form: bool = None): Assigns keyword arguments based on the provided category and regional form.
-    - __make_it_table(self, start_index: int = 0, scrap: list[Tag | NavigableString] = None,
-                      category: Literal[...] = None, regional_form: bool = None,
-                      pokemon_name: str = None, function: Callable = None) -> list[list]:
-      Constructs a table of data based on provided parameters and a function.
-    - obtain_moves(self, information: str = None, scrap: list[NavigableString | Tag] = None,
-                   regional: bool = None): Obtains a list of moves for a Pokémon based on the provided information.
+        - __init__(self, pokemon: Pokemon): Initializes the Moveset object with a Pokemon object,
+        initializes necessary attributes, and fetches moveset data from basic tables.
+        - __map_population(self, html_section: Tag = None, html_location_info: int = None): Maps and stores location
+        information for specific keywords within an HTML section.
+        - get_locations(self) -> dict[str | tuple, list[tuple[str, int]]]: Retrieves locations and their respective data
+        from an HTML table.
+        - __explore_maps(self, category: Literal[...] = None) -> Callable: Determines and returns the appropriate parsing
+        function based on the provided category.
+        - list_composition(self, location: int = None, category: Literal['Egg Move'] = None) -> list[Tag | NavigableString]:
+        Extracts and processes clean components from an HTML table.
+        - list_length(self, numerator: int, scrap: list[Tag | NavigableString] = None,
+                    category: Literal[...] = None, regional_form: bool = None) -> Literal[8, 9, 10, 11]:
+        Determines the number of elements required for a line in the main table based on given parameters.
+        - __assign_kwargs(self, category: Literal[...] = None, kwargs: dict = None,
+                        regional_form: bool = None): Assigns keyword arguments based on the provided category and regional form.
+        - __make_it_table(self, start_index: int = 0, scrap: list[Tag | NavigableString] = None,
+                        category: Literal[...] = None, regional_form: bool = None,
+                        pokemon_name: str = None, function: Callable = None) -> list[list]:
+        Constructs a table of data based on provided parameters and a function.
+        - obtain_moves(self, information: str = None, scrap: list[NavigableString | Tag] = None,
+                    regional: bool = None): Obtains a list of moves for a Pokémon based on the provided information.
 
     Notes:
-    - The class utilizes BeautifulSoup for HTML parsing and leverages various helper functions for data extraction and processing.
+        - The class utilizes BeautifulSoup for HTML parsing and leverages various helper functions for data extraction and processing.
     """
 
     def __init__(self, pokemon: Pokemon):
         """
         Initializes a Moveset object for a given Pokemon.
-
-        Args:
-        - pokemon (Pokemon): The Pokemon object for which the moveset information is being managed.
+        
+        Atributtes:
+            - pokemon (Pokemon): The Pokemon object for which the moveset information is being managed.
+            - _map (dict): A dictionary mapping categories of movesets to corresponding attribute names used for storage.
+            - table (BeautifulSoup object): HTML table containing moveset information fetched from the Pokemon's basic tables.
+            - lv (list): List to store Level Up moves.
+            - lv_form (list): List to store Level Up moves specific to regional forms.
+            - tm_hm (list): List to store TM and HM moves.
+            - tr (list): List to store TR moves.
+            - egg_moves (list): List to store Egg Moves.
+            - dynamax (list): List to store Max Moves (Dynamax moves).
+            - transfer (list): List to store Transfer moves.
+            - transfer_form (list): List to store Transfer moves specific to regional forms.
+            - z_moves (list): List to store Z Moves.
+            - mt (list): List to store Move Tutor moves.
+            - special_movs (list): List to store special moves specific to the Pokemon's generation.
         """
         self.pokemon = pokemon
 
@@ -114,23 +111,22 @@ class Moveset:
             self.bdsp_tutor = []
     
     def __map_population(self, html_section: list[Tag] = None, html_location_info: int = None):
-        """
-        Maps and stores location information for specific keywords within an HTML section.
+        """Maps and stores location information for specific keywords within an HTML section.
 
         Args:
-        - html_section (list[Tag], optional): The list of BeautifulSoup Tag objects representing the HTML section to process.
-        - html_location_info (int, optional): The index or location information associated with the HTML section.
+            html_section (list[Tag], optional): The list of BeautifulSoup Tag objects representing the HTML section to process.
+            html_location_info (int, optional): The index or location information associated with the HTML section.
 
         Returns:
-        - None: Modifies the internal `_map` dictionary in-place by appending location information for matching keywords.
+            None: Modifies the internal `_map` dictionary in-place by appending location information for matching keywords.
 
         Details:
-        - Iterates through each keyword-parser pair in the `_map` dictionary.
-        - Checks if the keyword exists in the text content of the first element of `html_section`.
-        - If a match is found:
-        - Appends `html_location_info + 1` to the parser list if the keyword is 'Transfer', otherwise appends `html_location_info`.
-        - Stops further iteration using `break` once a match is found.
-        - Handles `TypeError` exceptions gracefully during iteration if `html_section[0]` is not accessible.
+            - Iterates through each keyword-parser pair in the `_map` dictionary.
+            - Checks if the keyword exists in the text content of the first element of `html_section`.
+            - If a match is found:
+                - Appends `html_location_info + 1` to the parser list if the keyword is 'Transfer', otherwise appends `html_location_info`.
+                - Stops further iteration using `break` once a match is found.
+                - Handles `TypeError` exceptions gracefully during iteration if `html_section[0]` is not accessible.
 
         Example Usage:
         >>> html_section = soup.find_all('td')
@@ -148,12 +144,14 @@ class Moveset:
                                 break # Stop further iteration once a match is found
                             else:
                                 continue # Continue to the next iteration if the lenght of the list is more than 3
+                        
                         case _:
-                    # Check if keyword is found in the text content of the first element of html_section
+                            # Check if keyword is found in the text content of the first element of html_section
                             if (isinstance(keyword, tuple) and any(key in html_section[0].text for key in keyword)) or (isinstance(keyword, str) and keyword in html_section[0].text):
                                 # Append location information based on keyword type
                                 parser.append(html_location_info + 1 if keyword == 'Transfer' and self.pokemon.gen == 8 else html_location_info)
                                 break  # Stop further iteration once a match is found
+                
                 except TypeError:
                     continue  # Continue to the next iteration if html_section[0] is not accessible
 
@@ -165,7 +163,7 @@ class Moveset:
         information from an HTML table. Maps and stores this information in an internal 
         dictionary.
 
-        Returns:
+        returns:
             dict[str | tuple, list[tuple[str, int]]]: A dictionary where keys are 
             strings or tuples and values are lists of tuples containing a string 
             and an integer.
@@ -179,27 +177,26 @@ class Moveset:
             self.__map_population(location, position)
     
     def __explore_maps(self, category: Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move',
-                                                'Technical Machine', 'Technical Record', 'Hidden Machine', 'Move Tutor',
-                                                'Level Up', 'Pre-evolution', 'Egg Move', 'Transfer'] = None) -> Callable:
+            'Technical Machine', 'Technical Record', 'Hidden Machine', 'Move Tutor',
+            'Level Up', 'Pre-evolution', 'Egg Move', 'Transfer'] = None) -> Callable:
         """
         Determines and returns the appropriate parsing function based on the provided category.
 
-        Parameters:
-        - category (Literal): Specifies the category of moves or data to be parsed. It can be one of several predefined strings
-        such as 'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record', 'Hidden Machine',
-        'Move Tutor', 'Level Up', 'Pre-evolution', 'Egg Move', or 'Transfer'.
+        Args:
+            category (Literal): Specifies the category of moves or data to be parsed. It can be one of several predefined strings, such as 'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record', 'Hidden Machine',
+            'Move Tutor', 'Level Up', 'Pre-evolution', 'Egg Move', or 'Transfer'.
 
         Returns:
-        - Callable: The function corresponding to the given category that will be used for parsing.
+            Callable: The function corresponding to the given category that will be used for parsing.
 
         Raises:
-        - AssertionError: If no valid function is found for the provided category.
+            AssertionError: If no valid function is found for the provided category.
 
         Details:
-        - Uses a dictionary `f_x_map` where keys are categories and values are corresponding parsing functions.
-        - Iterates through `f_x_map` to find a matching function for the provided `category`.
-        - If `category` matches any key in `f_x_map`, assigns the corresponding function to `func`.
-        - Raises an `AssertionError` if `func` remains `None`, indicating that no valid function was found for `category`.
+            - Uses a dictionary `f_x_map` where keys are categories and values are corresponding parsing functions.
+            - Iterates through `f_x_map` to find a matching function for the provided `category`.
+            - If `category` matches any key in `f_x_map`, assigns the corresponding function to `func`.
+            - Raises an `AssertionError` if `func` remains `None`, indicating that no valid function was found for `category`.
 
         Example Usage:
         >>> parser_func = __explore_maps('TM')
@@ -239,39 +236,37 @@ class Moveset:
             category (Literal['Egg Move'], optional): Specifies the category of the data to extract. Defaults to None.
 
         Returns:
-            list[Tag | NavigableString]: A list of BeautifulSoup Tag objects and NavigableStrings after filtering and processing.
+            list(Tag | NavigableString): A list of BeautifulSoup Tag objects and NavigableStrings after filtering and processing.
 
-        Details:
-            - Processes an HTML table represented as a BeautifulSoup object (`self.table`). Extracts data from table cells (`td`)
-            and filters out unwanted content like nested tables and line breaks (`<br/>`).
-            - If `category` is specified as 'Egg Move', it identifies the end of relevant data by checking for the presence of an 'img' tag
-            and processes the table accordingly using the `egg_move_last_line` helper function.
-            - `egg_move_last_line` determines the endpoint of content extraction based on specific criteria related to the 'Egg Move' category.
+        Notes:
+            Processes an HTML table represented as a BeautifulSoup object (`self.table`). Extracts data from table cells (`td`), and filters out unwanted content like nested tables and line breaks (`<br/>`).
+            If `category` is specified as 'Egg Move', it identifies the end of relevant data by checking for the presence of an 'img' tag, and processes the table accordingly using the `egg_move_last_line` helper function.
+            `egg_move_last_line` determines the endpoint of content extraction based on specific criteria related to the 'Egg Move' category.
 
         Example Usage:
-            >>> html = BeautifulSoup(html_content, 'html.parser')
-            >>> result = list_composition(html, category='Egg Move')
-            >>> print(result)
-            [Tag1, Tag2, NavigableString1, ...]
+        >>> html = BeautifulSoup(html_content, 'html.parser')
+        >>> result = list_composition(html, category='Egg Move')
+        >>> print(result)
+        [Tag1, Tag2, NavigableString1, ...]
         """
         def egg_move_last_line(scrap: list[Tag | NavigableString] = None):
             """
             Determines the index of the last relevant line in the table based on the presence of an 'img' tag.
 
             Args:
-            - scrap (list[Union[Tag, NavigableString]]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
-            It should contain the content extracted from the HTML table.
+                scrap (list[Union[Tag, NavigableString]]): The list of BeautifulSoup Tag objects and NavigableStrings representing the table.
+                It should contain the content extracted from the HTML table.
 
             Returns:
-            - int: The index of the last relevant line in the table. If no relevant line is found or 'scrap' is empty,
-            it returns -1.
+                int: The index of the last relevant line in the table. If no relevant line is found or 'scrap' is empty,
+                it returns -1.
 
-            Details:
-            - This function iterates through the 'scrap' list to find the last line that contains relevant data, identified
-            by the presence of an 'img' tag. It helps determine the endpoint of content extraction for specific categories
-            like 'Egg Move'.
-            - The function assumes 'scrap' contains content from an HTML table, where relevant lines are separated by a fixed
-            number of elements (typically 9 elements per line).
+            Notes:
+                - This function iterates through the 'scrap' list to find the last line that contains relevant data, identified
+                by the presence of an 'img' tag. It helps determine the endpoint of content extraction for specific categories
+                like 'Egg Move'.
+                - The function assumes 'scrap' contains content from an HTML table, where relevant lines are separated by a fixed
+                number of elements (typically 9 elements per line).
 
             Example Usage:
             >>> scrap = [Tag1, NavigableString1, Tag2, ...]
@@ -319,32 +314,32 @@ class Moveset:
         return scrap  # Return the processed list of BeautifulSoup elements
 
     def list_length(self, numerator: int, scrap: list[Tag | NavigableString] = None,
-                    category: Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
-                                    'Technical Record', 'Hidden Machine', 'Level Up', 'Pre-evolution',
-                                    'Egg Move', 'Move Tutor', 'Transfer', 'Special Move'] = None,
-                    regional_form: bool = None) -> Literal[8, 9, 10, 11]:
+            category: Literal['TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine',
+                'Technical Record', 'Hidden Machine', 'Level Up', 'Pre-evolution',
+                'Egg Move', 'Move Tutor', 'Transfer', 'Special Move'] = None,
+            regional_form: bool = None) -> Literal[8, 9, 10, 11]:
         """
         Determines the number of elements required for a line in the main table based on the given category and regional form.
 
-        Parameters:
-        - numerator (int): The starting position in the `scrap` list.
-        - scrap (list[Tag | NavigableString]): The list of HTML tags and strings to process.
-        - category (Literal): The category to evaluate, affecting the number of elements required.
-        - regional_form (bool): Indicates if the elements belong to a regional form.
+        Args:
+            numerator (int): The starting position in the `scrap` list.
+            scrap (list[Tag | NavigableString]): The list of HTML tags and strings to process.
+            category (Literal): The category to evaluate, affecting the number of elements required.
+            regional_form (bool): Indicates if the elements belong to a regional form.
 
         Returns:
-        - int: The number of elements that the line needs to have to be correct in the main table.
+            (int): The number of elements that the line needs to have to be correct in the main table.\n
             Possible values are 8, 9, 10, or 11.
 
         Raises:
-        - AssertionError: If the `length` variable remains `None`, indicating an unsupported or invalid `category`.
+            AssertionError: If the `length` variable remains `None`, indicating an unsupported or invalid `category`.
 
         Details:
-        - Determines the appropriate number of elements (`length`) based on the combination of `category` and `regional_form`.
-        - Supports various categories such as 'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record',
-        'Hidden Machine', 'Level Up', 'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer', and 'Special Move'.
-        - Special handling for 'Egg Move', 'Z Move', 'Max Move', 'TM', 'TR', 'HM', 'Technical Machine', 'Technical Record',
-        'Move Tutor', 'Transfer', 'Pre-evolution', and 'Level Up' categories based on their specific requirements.
+            Determines the appropriate number of elements (`length`) based on the combination of `category` and `regional_form`.
+            Supports various categories such as `TM`, 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record',
+            'Hidden Machine', 'Level Up', 'Pre-evolution', 'Egg Move', 'Move Tutor', 'Transfer', and 'Special Move'.
+            Special handling for 'Egg Move', 'Z Move', 'Max Move', 'TM', 'TR', 'HM', 'Technical Machine', 'Technical Record',
+            'Move Tutor', 'Transfer', 'Pre-evolution', and 'Level Up' categories based on their specific requirements.
 
         Example Usage:
         >>> length = list_length(0, scrap, 'Egg Move', regional_form=False)
@@ -397,7 +392,7 @@ class Moveset:
 
     def __assign_kwargs(self, category: Literal['Pre-evolution', 'Move Tutor', 'Egg Move', 'Transfer',
                                                 'TM', 'TR', 'HM', 'Technical Machine', 'Technical Record'],
-                        kwargs: dict = None, regional_form: bool = None):
+        kwargs: dict = None, regional_form: bool = None):
         """
         Assigns keyword arguments (`kwargs`) based on the provided category and regional form flag.
 

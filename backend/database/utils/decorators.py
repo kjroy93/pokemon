@@ -175,20 +175,20 @@ def check_form_category():
     'HM', 'Z Move', 'Max Move', etc., and modifies the element if necessary.
 
     Returns:
-    - Callable: The wrapped function with additional logic for checking and processing form categories.
+        Callable: The wrapped function with additional logic for checking and processing form categories.
 
     The wrapped function takes the following parameters:
-    - line (list[Tag | NavigableString], optional): A list of BeautifulSoup Tag objects and NavigableStrings 
-      representing the HTML content.
-    - location_index (int, optional): The index in the line where the element is located.
-    - category (Literal, optional): The category to evaluate, which can be one of the following:
+        - line (list[Tag | NavigableString], optional): A list of BeautifulSoup Tag objects and NavigableStrings 
+        representing the HTML content.
+        - location_index (int, optional): The index in the line where the element is located.
+        category (Literal, optional): The category to evaluate, which can be one of the following:
         'TM', 'TR', 'HM', 'Z Move', 'Max Move', 'Technical Machine', 'Technical Record', 
         'Hidden Machine', 'Level Up', 'Pre_evolution', 'Egg Move'.
-    - *args, **kwargs: Additional arguments and keyword arguments for the wrapped function.
+        - *args, **kwargs: Additional arguments and keyword arguments for the wrapped function.
 
     The wrapped function returns:
-    - str | bool: A string representing the processed form category or a boolean flag indicating 
-      whether the form category was successfully processed.
+        str | bool: A string representing the processed form category or a boolean flag indicating 
+        whether the form category was successfully processed.
 
     Example:
         @check_form_category()

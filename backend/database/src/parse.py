@@ -7,10 +7,9 @@ from backend.database.utils import functions
 
 def find_table_by_class(gen:int, main_table:ResultSet[Tag], class_name:str=None, search:Literal['form','moveset']=None) -> Tag:
     """
-    Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class:
+    Function that goes to the exact class that contains the information, with the information that recives from self.__basic_tables() method in Pokémon class
 
     Attributes:
-
     - gen: Generation.
     - main_table: This is BeautifulSoup HTML.text r that contains all the information.
     - class_name: The class that needs to be located in the HTML. If there is a None in the Mega evolution class, is because the class_name does not matter in that case. Check the method in Mega_Pokemon.
